@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+  "language-server",
+  "language-server-derive",
+]
