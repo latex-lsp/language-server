@@ -1,3 +1,4 @@
+mod codec;
 pub mod jsonrpc;
 mod server;
 
