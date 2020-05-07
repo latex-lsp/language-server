@@ -74,6 +74,9 @@ impl Error {
     }
 }
 
+/// A specialized Result type for JSON-RPC operations.
+pub type Result<T, E = Error> = std::result::Result<T, E>;
+
 /// The request type for JSON-RPC messages.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Request {

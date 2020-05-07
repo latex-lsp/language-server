@@ -1,8 +1,6 @@
-use crate::LspClient;
+use crate::{jsonrpc::Result, LspClient};
 use async_trait::async_trait;
 use lsp_types::*;
-
-pub type Result<T> = std::result::Result<T, String>;
 
 /// Defines the server-side implementation of the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specification).
 ///

@@ -11,8 +11,6 @@ use serde::Serialize;
 use serde_json::json;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-pub type Result<T> = std::result::Result<T, Error>;
-
 /// Defines the client-side implementation of the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specification).
 #[jsonrpc_client(LspClient)]
 #[async_trait]

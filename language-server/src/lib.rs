@@ -167,15 +167,13 @@ where
     ) -> Response
     where
         H: Fn(P, LspClient) -> F + Send + Sync + 'a,
-        F: Future<Output = server::Result<R>> + Send,
+        F: Future<Output = Result<R>> + Send,
         P: DeserializeOwned + Send,
         R: Serialize,
     {
         let handle = |json| async move {
             let params = serde_json::from_value(json).map_err(|_| Error::deserialize_error())?;
-            let result = handler(params, client)
-                .await
-                .map_err(Error::internal_error)?;
+            let result = handler(params, client).await?;
             Ok(result)
         };
 
