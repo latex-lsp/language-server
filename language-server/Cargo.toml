@@ -14,6 +14,7 @@ async-trait = "0.1"
 bytes = "0.5"
 chashmap = "2.2"
 futures = "0.3"
+language-server-derive = { version = "0.1.0", path = "../language-server-derive" }
 log = "0.4"
 lsp-types = "0.74"
 nom = "5.1"
