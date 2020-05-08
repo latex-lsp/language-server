@@ -20,17 +20,17 @@ trait LanguageClient {
     /// can be used to report any kind of progress including work done progress
     /// (usually used to report progress in the user interface using a progress bar)
     /// and partial result progress to support streaming of results.
-    #[jsonrpc_method("$/progress", kind = "notification")]
+    #[jsonrpc_method(name = "$/progress", kind = "notification")]
     async fn progress(&self, params: ProgressParams);
 
     /// The [show message notification](https://microsoft.github.io/language-server-protocol/specification#window_showMessage)
     /// is sent from a server to a client to ask the client to display a particular message in the user interface.
-    #[jsonrpc_method("window/showMessage", kind = "notification")]
+    #[jsonrpc_method(name = "window/showMessage", kind = "notification")]
     async fn show_message(&self, params: ShowMessageParams);
 
     /// The [show message request](https://microsoft.github.io/language-server-protocol/specification#window_showMessageRequest)
     /// is sent from a server to a client to ask the client to display a particular message in the user interface.
-    #[jsonrpc_method("window/showMessageRequest", kind = "request")]
+    #[jsonrpc_method(name = "window/showMessageRequest", kind = "request")]
     async fn show_message_request(
         &self,
         params: ShowMessageRequestParams,
@@ -38,42 +38,42 @@ trait LanguageClient {
 
     /// The [log message notification](https://microsoft.github.io/language-server-protocol/specification#window_logMessage)
     /// is sent from the server to the client to ask the client to log a particular message.
-    #[jsonrpc_method("window/logMessage", kind = "notification")]
+    #[jsonrpc_method(name = "window/logMessage", kind = "notification")]
     async fn log_message(&self, params: LogMessageParams);
 
     /// The [`window/workDoneProgress/create`](https://microsoft.github.io/language-server-protocol/specification#window_workDoneProgress_create)
     /// request is sent from the server to the client to ask the client to create a work done progress.
-    #[jsonrpc_method("window/workDoneProgress/create", kind = "request")]
+    #[jsonrpc_method(name = "window/workDoneProgress/create", kind = "request")]
     async fn work_done_progress_create(&self, params: WorkDoneProgressCreateParams) -> Result<()>;
 
     /// The [telemetry notification](https://microsoft.github.io/language-server-protocol/specification#telemetry_event)
     /// is sent from the server to the client to ask the client to log a telemetry event.
-    #[jsonrpc_method("telemetry/event", kind = "notification")]
+    #[jsonrpc_method(name = "telemetry/event", kind = "notification")]
     async fn telemetry_event(&self, params: serde_json::Value);
 
     /// The [`client/registerCapability`](https://microsoft.github.io/language-server-protocol/specification#client_registerCapability)
     /// request is sent from the server to the client to register for a new capability on the client side.
-    #[jsonrpc_method("client/registerCapability", kind = "request")]
+    #[jsonrpc_method(name = "client/registerCapability", kind = "request")]
     async fn register_capability(&self, params: RegistrationParams) -> Result<()>;
 
     /// The [`client/unregisterCapability`](https://microsoft.github.io/language-server-protocol/specification#client_unregisterCapability)
     /// request is sent from the server to the client to unregister a previously registered capability.
-    #[jsonrpc_method("client/unregisterCapability", kind = "request")]
+    #[jsonrpc_method(name = "client/unregisterCapability", kind = "request")]
     async fn unregister_capability(&self, params: UnregistrationParams) -> Result<()>;
 
     /// The [`workspace/workspaceFolders`](https://microsoft.github.io/language-server-protocol/specification#workspace_workspaceFolders)
     /// request is sent from the server to the client to fetch the current open list of workspace folders.
-    #[jsonrpc_method("workspace/workspaceFolders", kind = "request")]
+    #[jsonrpc_method(name = "workspace/workspaceFolders", kind = "request")]
     async fn workspace_folders(&self, params: ()) -> Result<Vec<WorkspaceFolder>>;
 
     /// The [`workspace/configuration`](https://microsoft.github.io/language-server-protocol/specification#workspace_configuration)
     /// request is sent from the server to the client to fetch configuration settings from the client.
-    #[jsonrpc_method("workspace/configuration", kind = "request")]
+    #[jsonrpc_method(name = "workspace/configuration", kind = "request")]
     async fn configuration(&self, params: ConfigurationParams) -> Result<serde_json::Value>;
 
     /// The [`workspace/applyEdit`](https://microsoft.github.io/language-server-protocol/specification#workspace_applyEdit)
     /// request is sent from the server to the client to modify resource on the client side.
-    #[jsonrpc_method("workspace/applyEdit", kind = "request")]
+    #[jsonrpc_method(name = "workspace/applyEdit", kind = "request")]
     async fn apply_edit(
         &self,
         params: ApplyWorkspaceEditParams,
@@ -81,7 +81,7 @@ trait LanguageClient {
 
     /// [Diagnostics notification](https://microsoft.github.io/language-server-protocol/specification#textDocument_publishDiagnostics)
     /// are sent from the server to the client to signal results of validation runs.
-    #[jsonrpc_method("textDocument/publishDiagnostics", kind = "notification")]
+    #[jsonrpc_method(name = "textDocument/publishDiagnostics", kind = "notification")]
     async fn publish_diagnostics(&self, params: PublishDiagnosticsParams);
 }
 
