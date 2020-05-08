@@ -34,7 +34,7 @@ macro_rules! handle {
 
 /// Represents a service that processes messages according to the
 /// [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specification).
-pub struct LspService<I, O, S> {
+pub struct LanguageService<I, O, S> {
     input: I,
     output: O,
     output_tx: mpsc::Sender<String>,
@@ -43,7 +43,7 @@ pub struct LspService<I, O, S> {
     client: LanguageClient,
 }
 
-impl<I, O, S> LspService<I, O, S>
+impl<I, O, S> LanguageService<I, O, S>
 where
     I: AsyncRead + Unpin,
     O: AsyncWrite + Send + Unpin + 'static,
