@@ -1,3 +1,4 @@
+use darling::FromMeta;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{export::TokenStream2, *};
@@ -42,6 +43,14 @@ impl MethodMeta {
     }
 }
 
+#[derive(Debug, FromMeta)]
+struct JsonRpcClientArgs {
+    ident: Ident,
+
+    #[darling(default)]
+    keep_trait: bool,
+}
+
 #[proc_macro_attribute]
 pub fn jsonrpc_method(_attr: TokenStream, item: TokenStream) -> TokenStream {
     item
@@ -51,15 +60,33 @@ pub fn jsonrpc_method(_attr: TokenStream, item: TokenStream) -> TokenStream {
 pub fn jsonrpc_client(attr: TokenStream, item: TokenStream) -> TokenStream {
     let trait_: ItemTrait = parse_macro_input!(item);
     let trait_ident = &trait_.ident;
-    let stubs = generate_client_stubs(&trait_.items);
     let attr: AttributeArgs = parse_macro_input!(attr);
-    let struct_ident = unwrap!(attr.first().unwrap(), NestedMeta::Meta(Meta::Path(x)) => x);
-    let doc = format!("Generated client implementation of `{}`.", trait_ident);
+    let args: JsonRpcClientArgs = match JsonRpcClientArgs::from_list(&attr) {
+        Ok(args) => args,
+        Err(why) => {
+            return TokenStream::from(why.write_errors());
+        }
+    };
 
-    let tokens = quote! {
-        #trait_
+    let trait_def = if args.keep_trait {
+        let doc = format!("Generated client implementation of `{}`.", trait_ident);
+        quote! {
+            #trait_
+            #[doc = #doc]
+        }
+    } else {
+        let trait_doc = trait_
+            .attrs
+            .iter()
+            .filter(|attr| attr.path.get_ident().unwrap() == "doc");
+        quote! {
+            #(#trait_doc)*
+        }
+    };
 
-        #[doc = #doc]
+    let struct_ident = args.ident;
+    let stubs = generate_client_stubs(&trait_.items);
+    let struct_def = quote! {
         #[derive(Debug, Clone)]
         pub struct #struct_ident {
             client: std::sync::Arc<Client>
@@ -72,11 +99,7 @@ pub fn jsonrpc_client(attr: TokenStream, item: TokenStream) -> TokenStream {
                     client: std::sync::Arc::new(Client::new(output)),
                 }
             }
-        }
 
-        #[async_trait::async_trait]
-        impl #trait_ident for #struct_ident
-        {
             #(#stubs)*
         }
 
@@ -89,6 +112,11 @@ pub fn jsonrpc_client(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
+    let tokens = quote! {
+        #trait_def
+        #struct_def
+    };
+
     tokens.into()
 }
 
@@ -97,7 +125,10 @@ fn generate_client_stubs(items: &Vec<TraitItem>) -> Vec<TokenStream2> {
     for item in items {
         let method = unwrap!(item, TraitItem::Method(x) => x);
         let sig = &method.sig;
-        let param = unwrap!(&sig.inputs[1], FnArg::Typed(x) => &x.pat);
+        let ident = &sig.ident;
+        let param = unwrap!(&sig.inputs[1], FnArg::Typed(x) => x);
+        let param_pat = &param.pat;
+        let output = &sig.output;
 
         let attrs = &method.attrs;
         let method_attr = attrs
@@ -110,15 +141,15 @@ fn generate_client_stubs(items: &Vec<TraitItem>) -> Vec<TokenStream2> {
         let stub = match meta.kind {
             MethodKind::Request => quote!(
                 #(#attrs)*
-                #sig {
-                    let result = self.client.send_request(#name.to_owned(), #param).await?;
+                pub async fn #ident(&self, #param) #output {
+                    let result = self.client.send_request(#name.to_owned(), #param_pat).await?;
                     serde_json::from_value(result).map_err(|_| Error::deserialize_error())
                 }
             ),
             MethodKind::Notification => quote!(
                 #(#attrs)*
-                #sig {
-                    self.client.send_notification(#name.to_owned(), #param).await
+                pub async fn #ident(&self, #param) {
+                    self.client.send_notification(#name.to_owned(), #param_pat).await
                 }
             ),
         };

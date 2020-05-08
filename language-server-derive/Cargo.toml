@@ -11,5 +11,6 @@ proc-macro = true
 doctest = false
 
 [dependencies]
+darling = "0.10"
 syn = "1.0"
 quote = "1.0"

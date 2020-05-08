@@ -3,8 +3,13 @@ mod codec;
 pub mod jsonrpc;
 mod server;
 
-pub use client::{LanguageClient, LspClient};
+pub use client::LanguageClient;
 pub use server::LanguageServer;
+
+pub mod test {
+    //! Helpers to test language servers.
+    pub use crate::server::TestLanguageClient;
+}
 
 use client::ResponseHandler;
 use codec::LspCodec;
@@ -35,7 +40,7 @@ pub struct LspService<I, O, S> {
     output_tx: mpsc::Sender<String>,
     output_rx: mpsc::Receiver<String>,
     server: Arc<S>,
-    client: LspClient,
+    client: LanguageClient,
 }
 
 impl<I, O, S> LspService<I, O, S>
@@ -47,7 +52,7 @@ where
     /// Creates a new `LspService`.
     pub fn new(input: I, output: O, server: Arc<S>) -> Self {
         let (output_tx, output_rx) = mpsc::channel(0);
-        let client = LspClient::new(output_tx.clone());
+        let client = LanguageClient::new(output_tx.clone());
 
         Self {
             input,
@@ -86,7 +91,7 @@ where
 
     async fn handle_incoming(
         server: Arc<S>,
-        client: LspClient,
+        client: LanguageClient,
         mut output: mpsc::Sender<String>,
         json: &str,
     ) {
@@ -163,10 +168,10 @@ where
     async fn handle_request<'a, H, F, P, R>(
         request: Request,
         handler: H,
-        client: LspClient,
+        client: LanguageClient,
     ) -> Response
     where
-        H: Fn(P, LspClient) -> F + Send + Sync + 'a,
+        H: Fn(P, LanguageClient) -> F + Send + Sync + 'a,
         F: Future<Output = Result<R>> + Send,
         P: DeserializeOwned + Send,
         R: Serialize,
@@ -186,9 +191,9 @@ where
     async fn handle_notification<'a, H, F, P>(
         notification: Notification,
         handler: H,
-        client: LspClient,
+        client: LanguageClient,
     ) where
-        H: Fn(P, LspClient) -> F + Send + Sync + 'a,
+        H: Fn(P, LanguageClient) -> F + Send + Sync + 'a,
         F: Future<Output = ()> + Send,
         P: DeserializeOwned + Send,
     {

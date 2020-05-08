@@ -12,9 +12,9 @@ use serde_json::json;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Defines the client-side implementation of the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specification).
-#[jsonrpc_client(LspClient)]
+#[jsonrpc_client(ident = "LanguageClient")]
 #[async_trait]
-pub trait LanguageClient {
+trait LanguageClient {
     /// The base protocol offers also support to report progress in a generic fashion.
     /// [This mechanism](https://microsoft.github.io/language-server-protocol/specification#progress)
     /// can be used to report any kind of progress including work done progress
