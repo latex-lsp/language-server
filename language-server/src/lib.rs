@@ -6,7 +6,7 @@ mod server;
 pub use client::LanguageClient;
 pub use server::LanguageServer;
 
-pub mod test {
+pub mod testing {
     //! Helpers to test language servers.
     pub use crate::server::TestLanguageClient;
 }
