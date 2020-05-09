@@ -4,7 +4,7 @@ use crate::{
     LanguageClient,
 };
 use async_trait::async_trait;
-use language_server_derive::*;
+use language_server_macros::*;
 use lsp_types::*;
 use serde_json::json;
 

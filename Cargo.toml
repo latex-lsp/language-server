@@ -2,5 +2,5 @@
 
 members = [
   "language-server",
-  "language-server-derive",
+  "language-server-macros",
 ]

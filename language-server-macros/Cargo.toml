@@ -1,5 +1,5 @@
 [package]
-name = "language-server-derive"
+name = "language-server-macros"
 version = "0.1.0"
 authors = [
     "Eric Förster <efoerster@users.noreply.github.com>",

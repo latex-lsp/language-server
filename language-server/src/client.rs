@@ -5,7 +5,7 @@ use futures::{
     channel::{mpsc, oneshot},
     prelude::*,
 };
-use language_server_derive::*;
+use language_server_macros::*;
 use lsp_types::*;
 use serde::Serialize;
 use serde_json::json;
