@@ -6,12 +6,14 @@ use crate::{
 use async_trait::async_trait;
 use language_server_derive::*;
 use lsp_types::*;
+use serde_json::json;
 
 /// Defines the server-side implementation of the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specification).
 ///
 /// Empty default implementations are provided for convenience.
 #[allow(unused_variables)]
 #[jsonrpc_client(ident = "TestLanguageClient", keep_trait = true)]
+#[jsonrpc_server]
 #[async_trait]
 pub trait LanguageServer {
     /// The [`initialize`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#initialize)
@@ -412,4 +414,11 @@ pub trait LanguageServer {
     ) -> Result<Vec<SelectionRange>> {
         Ok(Vec::new())
     }
+}
+
+#[async_trait]
+pub trait RequestHandler {
+    async fn handle_request(&self, request: Request, client: LanguageClient) -> Response;
+
+    async fn handle_notification(&self, notification: Notification, client: LanguageClient);
 }

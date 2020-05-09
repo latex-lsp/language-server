@@ -1,7 +1,7 @@
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{export::TokenStream2, *};
+use syn::{export::TokenStream2, spanned::Spanned, *};
 
 enum Error {
     Syn(syn::Error),
@@ -34,6 +34,32 @@ struct JsonRpcMethodArgs {
     pub kind: MethodKind,
 }
 
+impl JsonRpcMethodArgs {
+    fn parse(method: &TraitItemMethod) -> Result<Option<JsonRpcMethodArgs>> {
+        let attrs = &method.attrs;
+        let method_attr = attrs
+            .iter()
+            .find(|attr| attr.path.is_ident("jsonrpc_method"));
+        if method_attr.is_none() {
+            return Ok(None);
+        }
+
+        if method.sig.inputs.is_empty() || method.sig.inputs.len() < 2 {
+            let span = method.sig.inputs.span();
+            let error = syn::Error::new(span, "expected &self and params argument");
+            return Err(Error::Syn(error));
+        }
+
+        if let FnArg::Typed(param) = &method.sig.inputs[0] {
+            let error = syn::Error::new(param.span(), "expected &self argument");
+            return Err(Error::Syn(error));
+        }
+
+        let args = JsonRpcMethodArgs::from_meta(&method_attr.unwrap().parse_meta()?)?;
+        Ok(Some(args))
+    }
+}
+
 #[derive(Debug, FromMeta)]
 struct JsonRpcClientArgs {
     ident: Ident,
@@ -45,6 +71,87 @@ struct JsonRpcClientArgs {
 #[proc_macro_attribute]
 pub fn jsonrpc_method(_attr: TokenStream, item: TokenStream) -> TokenStream {
     item
+}
+
+#[proc_macro_attribute]
+pub fn jsonrpc_server(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let trait_: ItemTrait = parse_macro_input!(item);
+    let (requests, notifications) = match generate_server_skeletons(&trait_.items) {
+        Ok((reqs, nots)) => (reqs, nots),
+        Err(Error::Syn(why)) => return why.to_compile_error().into(),
+        Err(Error::Darling(why)) => return why.write_errors().into(),
+    };
+
+    let tokens = quote! {
+        #trait_
+
+        #[async_trait::async_trait]
+        impl<S: LanguageServer + Sync> RequestHandler for S {
+            async fn handle_request(&self, request: Request, client: LanguageClient) -> Response {
+                match request.method.as_str() {
+                    #requests,
+                    _ => {
+                        Response::error(Error::method_not_found_error(), Some(request.id))
+                    }
+                }
+            }
+
+            async fn handle_notification(&self, notification: Notification, client: LanguageClient) {
+                match notification.method.as_str() {
+                    #notifications,
+                    _ => log::warn!("{}: {}", "Method not found", notification.method),
+                }
+            }
+        }
+    };
+
+    tokens.into()
+}
+
+fn generate_server_skeletons(items: &Vec<TraitItem>) -> Result<(TokenStream2, TokenStream2)> {
+    let mut requests = Vec::new();
+    let mut notifications = Vec::new();
+
+    for item in items {
+        let method = match item {
+            TraitItem::Method(method) => method,
+            _ => continue,
+        };
+
+        let args = match JsonRpcMethodArgs::parse(method)? {
+            Some(args) => args,
+            None => continue,
+        };
+
+        let ident = &method.sig.ident;
+        let name = args.name;
+
+        match args.kind {
+            MethodKind::Request => requests.push(quote!(
+                #name => {
+                    let handle = |json| async move {
+                        let params = serde_json::from_value(json).map_err(|_| Error::deserialize_error())?;
+                        let result = self.#ident(params, client).await?;
+                        Ok(result)
+                    };
+
+                    match handle(request.params).await {
+                        Ok(result) => Response::result(json!(result), request.id),
+                        Err(error) => Response::error(error, Some(request.id)),
+                    }
+                }
+            )),
+            MethodKind::Notification => notifications.push(quote!(
+                #name => {
+                    let error = Error::deserialize_error().message;
+                    let params = serde_json::from_value(notification.params).expect(&error);
+                    self.#ident(params, client).await;
+                }
+            )),
+        };
+    }
+
+    Ok((quote! { #(#requests)* }, quote! { #(#notifications)* }))
 }
 
 #[proc_macro_attribute]
@@ -131,32 +238,20 @@ fn generate_client_stubs(items: &Vec<TraitItem>) -> TokenStream2 {
 }
 
 fn create_client_stub(method: &TraitItemMethod) -> Result<Option<TokenStream2>> {
+    let args = match JsonRpcMethodArgs::parse(method)? {
+        Some(args) => args,
+        None => return Ok(None),
+    };
+
     let attrs = &method.attrs;
-    let method_attr = attrs
-        .iter()
-        .find(|attr| attr.path.is_ident("jsonrpc_method"));
-
-    if method_attr.is_none() {
-        return Ok(None);
-    }
-
-    if method.sig.inputs.is_empty() || method.sig.inputs.len() < 2 {
-        let span = method.sig.paren_token.span;
-        let error = syn::Error::new(span, "expected &self and params argument");
-        return Err(Error::Syn(error));
-    }
-
     let ident = &method.sig.ident;
     let param = match &method.sig.inputs[1] {
         FnArg::Typed(param) => param,
         FnArg::Receiver(_) => unreachable!(),
     };
-
     let param_pat = &param.pat;
     let output = &method.sig.output;
-    let args = JsonRpcMethodArgs::from_meta(&method_attr.unwrap().parse_meta()?)?;
     let name = args.name;
-
     let stub = match args.kind {
         MethodKind::Request => quote!(
             #(#attrs)*
