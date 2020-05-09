@@ -11,6 +11,9 @@ pub mod testing {
     pub use crate::server::TestLanguageClient;
 }
 
+pub use async_trait;
+pub use lsp_types as types;
+
 use client::ResponseHandler;
 use codec::LspCodec;
 use futures::{channel::mpsc, sink::SinkExt, stream::StreamExt};
