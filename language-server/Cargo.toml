@@ -1,9 +1,15 @@
 [package]
 name = "language-server"
+description = "A library to implement language servers in Rust."
 version = "0.1.0"
+license = "MIT"
 authors = [
     "Eric Förster <eric.foerster@outlook.com>", 
     "Patrick Förster <patrick.foerster@outlook.de>"]
+readme = "../README.md"
+repository = "https://github.com/latex-lsp/language-server"
+categories = ["development-tools"]
+keywords = ["lsp"]
 edition = "2018"
 
 [lib]
