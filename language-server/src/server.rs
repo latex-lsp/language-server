@@ -416,6 +416,17 @@ pub trait LanguageServer {
     }
 }
 
+/// Allows to do additional work before and/or after processing the message.
+#[allow(unused_variables)]
+#[async_trait]
+pub trait Middleware {
+    /// Method invoked before a message is being processed.
+    async fn before_message(&self, message: &Message) {}
+
+    /// Method invoked after a message was processed.
+    async fn after_message(&self, message: &Message, response: Option<&Response>) {}
+}
+
 #[async_trait]
 pub trait RequestHandler {
     async fn handle_request(&self, request: Request, client: LanguageClient) -> Response;
