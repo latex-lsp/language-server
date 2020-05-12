@@ -1,15 +1,18 @@
 use crate::jsonrpc::*;
 use async_trait::async_trait;
-use chashmap::CHashMap;
 use futures::{
     channel::{mpsc, oneshot},
+    lock::Mutex,
     prelude::*,
 };
 use language_server_macros::*;
 use lsp_types::*;
 use serde::Serialize;
 use serde_json::json;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 /// Defines the client-side implementation of the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specification).
 #[jsonrpc_client(ident = "LanguageClient")]
@@ -94,7 +97,7 @@ pub trait ResponseHandler {
 pub struct Client {
     output: mpsc::Sender<String>,
     request_id: AtomicU64,
-    senders_by_id: CHashMap<Id, oneshot::Sender<Result<serde_json::Value>>>,
+    senders_by_id: Mutex<HashMap<Id, oneshot::Sender<Result<serde_json::Value>>>>,
 }
 
 impl Client {
@@ -102,7 +105,7 @@ impl Client {
         Self {
             output,
             request_id: AtomicU64::new(0),
-            senders_by_id: CHashMap::new(),
+            senders_by_id: Mutex::new(HashMap::new()),
         }
     }
 
@@ -115,7 +118,11 @@ impl Client {
         let request = Request::new(method, json!(params), Id::Number(id));
 
         let (result_tx, result_rx) = oneshot::channel();
-        self.senders_by_id.insert(request.id.clone(), result_tx);
+        {
+            let mut senders_by_id = self.senders_by_id.lock().await;
+            senders_by_id.insert(request.id.clone(), result_tx);
+        }
+
         self.send(Message::Request(request)).await;
 
         result_rx.await.unwrap()
@@ -142,10 +149,13 @@ impl ResponseHandler for Client {
             None => Ok(response.result.unwrap_or(serde_json::Value::Null)),
         };
 
-        let result_tx = self
-            .senders_by_id
-            .remove(&id)
-            .expect("Unexpected response received");
+        let result_tx = {
+            let mut senders_by_id = self.senders_by_id.lock().await;
+            senders_by_id
+                .remove(&id)
+                .expect("Unexpected response received")
+        };
+
         result_tx.send(result).unwrap();
     }
 }

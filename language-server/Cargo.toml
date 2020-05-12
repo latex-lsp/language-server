@@ -18,7 +18,6 @@ doctest = false
 [dependencies]
 async-trait = "0.1"
 bytes = "0.5"
-chashmap = "2.2"
 futures = "0.3"
 futures_codec = "0.4"
 language-server-macros = { version = "0.1.0", path = "../language-server-macros" }
