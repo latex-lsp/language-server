@@ -1,7 +1,7 @@
 use bytes::{BufMut, BytesMut};
+use futures_codec::{Decoder, Encoder};
 use log::trace;
 use std::io::{Error, ErrorKind};
-use tokio_util::codec::{Decoder, Encoder};
 
 pub struct LspCodec;
 
@@ -29,7 +29,8 @@ impl Decoder for LspCodec {
     }
 }
 
-impl Encoder<String> for LspCodec {
+impl Encoder for LspCodec {
+    type Item = String;
     type Error = Error;
 
     fn encode(&mut self, item: String, dst: &mut BytesMut) -> Result<(), Self::Error> {
