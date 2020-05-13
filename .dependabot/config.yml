@@ -1,0 +1,8 @@
+version: 1
+update_configs:
+  - package_manager: "rust:cargo"
+    directory: "/language-server"
+    update_schedule: "daily"
+  - package_manager: "rust:cargo"
+    directory: "/language-server-macros"
+    update_schedule: "daily"
