@@ -20,7 +20,7 @@
 //! impl LanguageServer for Server {
 //!     async fn initialize(
 //!         &self,
-//!         _params: InitializedParams,
+//!         _params: InitializeParams,
 //!         _client: &dyn LanguageClient,
 //!     ) -> Result<InitializeResult> {
 //!         Ok(InitializeResult::default())

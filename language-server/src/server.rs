@@ -16,7 +16,7 @@ pub trait LanguageServer {
     #[jsonrpc_method(name = "initialize", kind = "request")]
     async fn initialize(
         &self,
-        params: InitializedParams,
+        params: InitializeParams,
         client: &dyn LanguageClient,
     ) -> Result<InitializeResult>;
 
