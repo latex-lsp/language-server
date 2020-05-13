@@ -45,8 +45,9 @@ where
     E: Spawn + Clone,
 {
     /// Creates a new `LspService`.
-    pub fn new(input: I, output: O, server: Arc<S>, executor: E) -> Self {
+    pub fn new(input: I, output: O, server: S, executor: E) -> Self {
         let (output_tx, output_rx) = mpsc::channel(0);
+        let server = Arc::new(server);
         let client = LanguageClientImpl::new(output_tx.clone());
 
         Self {
