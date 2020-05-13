@@ -12,8 +12,12 @@ pub fn jsonrpc_server(trait_: ItemTrait) -> Result<TokenStream> {
         #trait_
 
         #[async_trait::async_trait]
-        impl<S: LanguageServer + Sync> RequestHandler for S {
-            async fn handle_request(&self, request: Request, client: LanguageClient) -> Response {
+        impl<S, C> RequestHandler<C> for S
+        where
+            S: LanguageServer + Sync,
+            C: LanguageClient,
+        {
+            async fn handle_request(&self, request: Request, client: &C) -> Response {
                 match request.method.as_str() {
                     #requests,
                     _ => {
@@ -22,7 +26,7 @@ pub fn jsonrpc_server(trait_: ItemTrait) -> Result<TokenStream> {
                 }
             }
 
-            async fn handle_notification(&self, notification: Notification, client: LanguageClient) {
+            async fn handle_notification(&self, notification: Notification, client: &C) {
                 match notification.method.as_str() {
                     #notifications,
                     _ => log::warn!("{}: {}", "Method not found", notification.method),

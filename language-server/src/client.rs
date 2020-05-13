@@ -15,9 +15,9 @@ use std::{
 };
 
 /// Defines the client-side implementation of the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specification).
-#[jsonrpc_client(ident = "LanguageClient")]
+#[jsonrpc_client(ident = "LanguageClientImpl")]
 #[async_trait]
-trait LanguageClient {
+pub trait LanguageClient: Sync {
     /// The base protocol offers also support to report progress in a generic fashion.
     /// [This mechanism](https://microsoft.github.io/language-server-protocol/specification#progress)
     /// can be used to report any kind of progress including work done progress

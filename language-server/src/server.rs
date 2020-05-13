@@ -1,8 +1,4 @@
-use crate::{
-    client::{Client, ResponseHandler},
-    jsonrpc::*,
-    LanguageClient,
-};
+use crate::{client::LanguageClient, jsonrpc::*};
 use async_trait::async_trait;
 use language_server_macros::*;
 use lsp_types::*;
@@ -12,7 +8,6 @@ use serde_json::json;
 ///
 /// Empty default implementations are provided for convenience.
 #[allow(unused_variables)]
-#[jsonrpc_client(ident = "TestLanguageClient", keep_trait = true)]
 #[jsonrpc_server]
 #[async_trait]
 pub trait LanguageServer {
@@ -22,27 +17,27 @@ pub trait LanguageServer {
     async fn initialize(
         &self,
         params: InitializedParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<InitializeResult>;
 
     /// The [`initialized`](https://microsoft.github.io/language-server-protocol/specification#initialized)
     /// notification is sent from the client to the server after the client received the result of the `initialize`
     /// request but before the client is sending any other request or notification to the server.
     #[jsonrpc_method(name = "initialized", kind = "notification")]
-    async fn initialized(&self, params: InitializedParams, client: LanguageClient) {}
+    async fn initialized(&self, params: InitializedParams, client: &dyn LanguageClient) {}
 
     /// The [`shutdown`](https://microsoft.github.io/language-server-protocol/specification#shutdown)
     /// request is sent from the client to the server. It asks the server to shut down,
     /// but to not exit (otherwise the response might not be delivered correctly to the client).
     #[jsonrpc_method(name = "shutdown", kind = "request")]
-    async fn shutdown(&self, params: (), client: LanguageClient) -> Result<()> {
+    async fn shutdown(&self, params: (), client: &dyn LanguageClient) -> Result<()> {
         Ok(())
     }
 
     /// A [notification](https://microsoft.github.io/language-server-protocol/specification#exit) to ask the server to exit its process.
     /// The server should exit with success code 0 if the shutdown request has been received before; otherwise with error code 1.
     #[jsonrpc_method(name = "exit", kind = "notification")]
-    async fn exit(&self, params: (), client: LanguageClient) {}
+    async fn exit(&self, params: (), client: &dyn LanguageClient) {}
 
     /// The [`window/workDoneProgress/cancel`](https://microsoft.github.io/language-server-protocol/specification#window_workDoneProgress_cancel)
     /// notification is sent from the client to the server to cancel a progress initiated on the server side using the
@@ -51,7 +46,7 @@ pub trait LanguageServer {
     async fn work_done_progress_cancel(
         &self,
         params: WorkDoneProgressCancelParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) {
     }
 
@@ -61,7 +56,7 @@ pub trait LanguageServer {
     async fn did_change_workspace_folders(
         &self,
         params: DidChangeWorkspaceFoldersParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) {
     }
 
@@ -71,7 +66,7 @@ pub trait LanguageServer {
     async fn did_change_configuration(
         &self,
         params: DidChangeConfigurationParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) {
     }
 
@@ -81,7 +76,7 @@ pub trait LanguageServer {
     async fn did_change_watched_files(
         &self,
         params: DidChangeWatchedFilesParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) {
     }
 
@@ -91,7 +86,7 @@ pub trait LanguageServer {
     async fn workspace_symbol(
         &self,
         params: WorkspaceSymbolParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<SymbolInformation>> {
         Ok(Vec::new())
     }
@@ -102,7 +97,7 @@ pub trait LanguageServer {
     async fn execute_command(
         &self,
         params: ExecuteCommandParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Option<serde_json::Value>> {
         Ok(None)
     }
@@ -110,17 +105,17 @@ pub trait LanguageServer {
     /// The [document open notification](https://microsoft.github.io/language-server-protocol/specification#textDocument_didOpen)
     /// is sent from the client to the server to signal newly opened text documents.
     #[jsonrpc_method(name = "textDocument/didOpen", kind = "notification")]
-    async fn did_open(&self, params: DidOpenTextDocumentParams, client: LanguageClient) {}
+    async fn did_open(&self, params: DidOpenTextDocumentParams, client: &dyn LanguageClient) {}
 
     /// The [document change notification](https://microsoft.github.io/language-server-protocol/specification#textDocument_didChange)
     /// is sent from the client to the server to signal changes to a text document.
     #[jsonrpc_method(name = "textDocument/didChange", kind = "notification")]
-    async fn did_change(&self, params: DidChangeTextDocumentParams, client: LanguageClient) {}
+    async fn did_change(&self, params: DidChangeTextDocumentParams, client: &dyn LanguageClient) {}
 
     /// The [document will save notification](https://microsoft.github.io/language-server-protocol/specification#textDocument_willSave)
     /// is sent from the client to the server before the document is actually saved.
     #[jsonrpc_method(name = "textDocument/willSave", kind = "notification")]
-    async fn will_save(&self, params: WillSaveTextDocumentParams, client: LanguageClient) {}
+    async fn will_save(&self, params: WillSaveTextDocumentParams, client: &dyn LanguageClient) {}
 
     /// The [document will save request](https://microsoft.github.io/language-server-protocol/specification#textDocument_willSaveWaitUntil)
     /// is sent from the client to the server before the document is actually saved.
@@ -128,7 +123,7 @@ pub trait LanguageServer {
     async fn will_save_wait_until(
         &self,
         params: WillSaveTextDocumentParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<TextEdit>> {
         Ok(Vec::new())
     }
@@ -136,12 +131,12 @@ pub trait LanguageServer {
     /// The [document save notification](https://microsoft.github.io/language-server-protocol/specification#textDocument_didSave)
     /// is sent from the client to the server when the document was saved in the client.
     #[jsonrpc_method(name = "textDocument/didSave", kind = "notification")]
-    async fn did_save(&self, params: DidSaveTextDocumentParams, client: LanguageClient) {}
+    async fn did_save(&self, params: DidSaveTextDocumentParams, client: &dyn LanguageClient) {}
 
     /// The [document close notification](https://microsoft.github.io/language-server-protocol/specification#textDocument_didClose)
     /// is sent from the client to the server when the document got closed in the client.
     #[jsonrpc_method(name = "textDocument/didClose", kind = "notification")]
-    async fn did_close(&self, params: DidCloseTextDocumentParams, client: LanguageClient) {}
+    async fn did_close(&self, params: DidCloseTextDocumentParams, client: &dyn LanguageClient) {}
 
     /// The [Completion request](https://microsoft.github.io/language-server-protocol/specification#textDocument_completion)
     /// is sent from the client to the server to compute completion items at a given cursor position.
@@ -149,7 +144,7 @@ pub trait LanguageServer {
     async fn completion(
         &self,
         params: CompletionParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<CompletionResponse> {
         Ok(CompletionResponse::Array(Vec::new()))
     }
@@ -160,7 +155,7 @@ pub trait LanguageServer {
     async fn completion_resolve(
         &self,
         item: CompletionItem,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<CompletionItem> {
         Ok(item)
     }
@@ -171,7 +166,7 @@ pub trait LanguageServer {
     async fn hover(
         &self,
         params: TextDocumentPositionParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Option<Hover>> {
         Ok(None)
     }
@@ -182,7 +177,7 @@ pub trait LanguageServer {
     async fn signature_help(
         &self,
         params: SignatureHelpParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Option<SignatureHelp>> {
         Ok(None)
     }
@@ -193,7 +188,7 @@ pub trait LanguageServer {
     async fn declaration(
         &self,
         params: GotoDefinitionParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<GotoDefinitionResponse> {
         Ok(GotoDefinitionResponse::Array(Vec::new()))
     }
@@ -204,7 +199,7 @@ pub trait LanguageServer {
     async fn definition(
         &self,
         params: GotoDefinitionParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<GotoDefinitionResponse> {
         Ok(GotoDefinitionResponse::Array(Vec::new()))
     }
@@ -215,7 +210,7 @@ pub trait LanguageServer {
     async fn type_definition(
         &self,
         params: GotoDefinitionParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<GotoDefinitionResponse> {
         Ok(GotoDefinitionResponse::Array(Vec::new()))
     }
@@ -226,7 +221,7 @@ pub trait LanguageServer {
     async fn implementation(
         &self,
         params: GotoDefinitionParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<GotoDefinitionResponse> {
         Ok(GotoDefinitionResponse::Array(Vec::new()))
     }
@@ -237,7 +232,7 @@ pub trait LanguageServer {
     async fn references(
         &self,
         params: ReferenceParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<Location>> {
         Ok(Vec::new())
     }
@@ -248,7 +243,7 @@ pub trait LanguageServer {
     async fn document_highlight(
         &self,
         params: TextDocumentPositionParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<DocumentHighlight>> {
         Ok(Vec::new())
     }
@@ -259,7 +254,7 @@ pub trait LanguageServer {
     async fn document_symbol(
         &self,
         params: DocumentSymbolParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<DocumentSymbolResponse> {
         Ok(DocumentSymbolResponse::Flat(Vec::new()))
     }
@@ -270,7 +265,7 @@ pub trait LanguageServer {
     async fn code_action(
         &self,
         params: CodeActionParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<CodeActionResponse> {
         Ok(CodeActionResponse::new())
     }
@@ -281,7 +276,7 @@ pub trait LanguageServer {
     async fn code_lens(
         &self,
         params: CodeLensParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<CodeLens>> {
         Ok(Vec::new())
     }
@@ -289,7 +284,11 @@ pub trait LanguageServer {
     /// The [code lens resolve request](https://microsoft.github.io/language-server-protocol/specification#codeLens_resolve)
     /// is sent from the client to the server to resolve the command for a given code lens item.
     #[jsonrpc_method(name = "codeLens/resolve", kind = "request")]
-    async fn code_lens_resolve(&self, item: CodeLens, client: LanguageClient) -> Result<CodeLens> {
+    async fn code_lens_resolve(
+        &self,
+        item: CodeLens,
+        client: &dyn LanguageClient,
+    ) -> Result<CodeLens> {
         Ok(item)
     }
 
@@ -299,7 +298,7 @@ pub trait LanguageServer {
     async fn document_link(
         &self,
         params: DocumentLinkParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<DocumentLink>> {
         Ok(Vec::new())
     }
@@ -310,7 +309,7 @@ pub trait LanguageServer {
     async fn document_link_resolve(
         &self,
         item: DocumentLink,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<DocumentLink> {
         Ok(item)
     }
@@ -321,7 +320,7 @@ pub trait LanguageServer {
     async fn document_color(
         &self,
         params: DocumentColorParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<ColorInformation>> {
         Ok(Vec::new())
     }
@@ -332,7 +331,7 @@ pub trait LanguageServer {
     async fn color_presentation(
         &self,
         params: ColorPresentationParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<ColorPresentation>> {
         Ok(Vec::new())
     }
@@ -343,7 +342,7 @@ pub trait LanguageServer {
     async fn formatting(
         &self,
         params: DocumentFormattingParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<TextEdit>> {
         Ok(Vec::new())
     }
@@ -354,7 +353,7 @@ pub trait LanguageServer {
     async fn range_formatting(
         &self,
         params: DocumentRangeFormattingParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<TextEdit>> {
         Ok(Vec::new())
     }
@@ -365,7 +364,7 @@ pub trait LanguageServer {
     async fn on_type_formatting(
         &self,
         params: DocumentOnTypeFormattingParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<TextEdit>> {
         Ok(Vec::new())
     }
@@ -377,7 +376,7 @@ pub trait LanguageServer {
     async fn rename(
         &self,
         params: RenameParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Option<WorkspaceEdit>> {
         Ok(None)
     }
@@ -388,7 +387,7 @@ pub trait LanguageServer {
     async fn prepare_rename(
         &self,
         params: TextDocumentPositionParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Option<PrepareRenameResponse>> {
         Ok(None)
     }
@@ -399,7 +398,7 @@ pub trait LanguageServer {
     async fn folding_range(
         &self,
         params: FoldingRangeParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<FoldingRange>> {
         Ok(Vec::new())
     }
@@ -410,7 +409,7 @@ pub trait LanguageServer {
     async fn selection_range(
         &self,
         params: SelectionRangeParams,
-        client: LanguageClient,
+        client: &dyn LanguageClient,
     ) -> Result<Vec<SelectionRange>> {
         Ok(Vec::new())
     }
@@ -428,8 +427,11 @@ pub trait Middleware {
 }
 
 #[async_trait]
-pub trait RequestHandler {
-    async fn handle_request(&self, request: Request, client: LanguageClient) -> Response;
+pub trait RequestHandler<C>
+where
+    C: LanguageClient,
+{
+    async fn handle_request(&self, request: Request, client: &C) -> Response;
 
-    async fn handle_notification(&self, notification: Notification, client: LanguageClient);
+    async fn handle_notification(&self, notification: Notification, client: &C);
 }

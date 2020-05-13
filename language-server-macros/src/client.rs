@@ -10,29 +10,16 @@ use syn::{export::TokenStream2, *};
 #[derive(Debug, FromMeta)]
 struct JsonRpcClientArgs {
     ident: Ident,
-
-    #[darling(default)]
-    keep_trait: bool,
 }
 
 pub fn jsonrpc_client(attr: AttributeArgs, trait_: ItemTrait) -> Result<TokenStream> {
     let args = JsonRpcClientArgs::from_list(&attr)?;
-    let trait_def = if args.keep_trait {
-        let doc = format!("Generated client implementation of `{}`.", &trait_.ident);
-        quote! {
-            #trait_
-            #[doc = #doc]
-        }
-    } else {
-        let trait_doc = trait_.attrs.iter().filter(|attr| attr.path.is_ident("doc"));
-        quote! {
-            #(#trait_doc)*
-        }
-    };
-
+    let trait_ident = &trait_.ident;
     let struct_ident = args.ident;
     let stubs = generate_client_stubs(&trait_.items)?;
-    let struct_def = quote! {
+    let tokens = quote! {
+        #trait_
+
         #[derive(Debug, Clone)]
         pub struct #struct_ident {
             client: std::sync::Arc<Client>
@@ -45,22 +32,21 @@ pub fn jsonrpc_client(attr: AttributeArgs, trait_: ItemTrait) -> Result<TokenStr
                     client: std::sync::Arc::new(Client::new(output)),
                 }
             }
+        }
 
+        #[async_trait::async_trait]
+        impl #trait_ident for #struct_ident
+        {
             #stubs
         }
 
         #[async_trait::async_trait]
         impl ResponseHandler for #struct_ident
         {
-            async fn handle(&self, response: Response) -> () {
-                self.client.handle(response).await
+            async fn handle(&self, response: Response) {
+                self.client.handle(response).await;
             }
         }
-    };
-
-    let tokens = quote! {
-        #trait_def
-        #struct_def
     };
 
     Ok(tokens.into())
@@ -90,14 +76,14 @@ fn generate_client_stubs(items: &Vec<TraitItem>) -> Result<TokenStream2> {
         let stub = match args.kind {
             MethodKind::Request => quote!(
                 #(#attrs)*
-                pub async fn #ident(&self, #param) #output {
+                async fn #ident(&self, #param) #output {
                     let result = self.client.send_request(#name.to_owned(), #param_pat).await?;
                     serde_json::from_value(result).map_err(|_| Error::deserialize_error())
                 }
             ),
             MethodKind::Notification => quote!(
                 #(#attrs)*
-                pub async fn #ident(&self, #param) {
+                async fn #ident(&self, #param) {
                     self.client.send_notification(#name.to_owned(), #param_pat).await
                 }
             ),

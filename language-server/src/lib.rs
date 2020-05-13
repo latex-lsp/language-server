@@ -6,15 +6,15 @@ mod server;
 pub use client::LanguageClient;
 pub use server::{LanguageServer, Middleware};
 
-pub mod testing {
-    //! Helpers to test language servers.
-    pub use crate::server::TestLanguageClient;
-}
-
 pub use async_trait;
 pub use lsp_types as types;
 
-use crate::{client::ResponseHandler, codec::LspCodec, jsonrpc::*, server::RequestHandler};
+use crate::{
+    client::{LanguageClientImpl, ResponseHandler},
+    codec::LspCodec,
+    jsonrpc::*,
+    server::RequestHandler,
+};
 use futures::{
     channel::mpsc,
     sink::SinkExt,
@@ -33,7 +33,7 @@ pub struct LanguageService<I, O, S, E> {
     output_tx: mpsc::Sender<String>,
     output_rx: mpsc::Receiver<String>,
     server: Arc<S>,
-    client: LanguageClient,
+    client: LanguageClientImpl,
     executor: E,
 }
 
@@ -47,7 +47,7 @@ where
     /// Creates a new `LspService`.
     pub fn new(input: I, output: O, server: Arc<S>, executor: E) -> Self {
         let (output_tx, output_rx) = mpsc::channel(0);
-        let client = LanguageClient::new(output_tx.clone());
+        let client = LanguageClientImpl::new(output_tx.clone());
 
         Self {
             input,
@@ -97,7 +97,7 @@ where
 
     async fn handle_message(
         server: Arc<S>,
-        client: LanguageClient,
+        client: LanguageClientImpl,
         mut output: mpsc::Sender<String>,
         executor: E,
         message: Message,
@@ -108,7 +108,7 @@ where
             Message::Request(request) => {
                 executor
                     .spawn(async move {
-                        let response = server.handle_request(request, client).await;
+                        let response = server.handle_request(request, &client).await;
                         let json = serde_json::to_string(&response).unwrap();
                         output.send(json).await.unwrap();
                         server.after_message(&message, Some(&response)).await;
@@ -116,7 +116,7 @@ where
                     .expect("failed to spawn future");
             }
             Message::Notification(notification) => {
-                server.handle_notification(notification, client).await;
+                server.handle_notification(notification, &client).await;
                 server.after_message(&message, None).await;
             }
             Message::Response(response) => {
