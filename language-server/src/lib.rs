@@ -1,3 +1,47 @@
+//! A library to implement language servers in Rust.
+//!
+//! # Example
+//!
+//! A simple language server using the [Tokio](https://tokio.rs/) runtime:
+//!
+//! ```no_run
+//! use async_executors::TokioTp;
+//! use language_server::{async_trait::async_trait, jsonrpc::Result, types::*, *};
+//! use std::convert::TryFrom;
+//! use tokio_util::compat::*;
+//!
+//! struct Server;
+//!
+//! #[async_trait]
+//! impl LanguageServer for Server {
+//!     async fn initialize(
+//!         &self,
+//!         _params: InitializedParams,
+//!         _client: &dyn LanguageClient,
+//!     ) -> Result<InitializeResult> {
+//!         Ok(InitializeResult::default())
+//!     }
+//!
+//!     async fn initialized(&self, _params: InitializedParams, client: &dyn LanguageClient) {
+//!         let params = ShowMessageParams {
+//!             typ: MessageType::Info,
+//!             message: "Hello World!".to_owned(),
+//!         };
+//!
+//!         client.show_message(params).await;
+//!     }
+//! }
+//!
+//! fn main() {
+//!     let stdin = tokio::io::stdin().compat();
+//!     let stdout = tokio::io::stdout().compat_write();
+//!     let executor = TokioTp::try_from(&mut tokio::runtime::Builder::new())
+//!         .expect("failed to create thread pool");
+//!
+//!     let service = LanguageService::new(stdin, stdout, Server, executor.clone());
+//!     executor.block_on(service.listen());
+//! }
+//! ```
 mod client;
 mod codec;
 pub mod jsonrpc;

@@ -1,16 +1,3 @@
-[![Rust](https://img.shields.io/badge/rustc-1.39%2B-blue)](https://blog.rust-lang.org/2019/11/07/Rust-1.39.0.html)
-[![crates.io](https://img.shields.io/crates/v/language-server)](https://crates.io/crates/language-server)
-[![docs.rs](https://docs.rs/language-server/badge.svg)](https://docs.rs/language-server)
-
-# language-server
-
-A library to implement language servers in Rust.
-
-## Example
-
-A simple language server using the [Tokio](https://tokio.rs/) runtime:
-
-```rust
 use async_executors::TokioTp;
 use language_server::{async_trait::async_trait, jsonrpc::Result, types::*, *};
 use std::convert::TryFrom;
@@ -39,6 +26,14 @@ impl LanguageServer for Server {
 }
 
 fn main() {
+    stderrlog::new()
+        .module(module_path!())
+        .module("language_server")
+        .verbosity(5)
+        .timestamp(stderrlog::Timestamp::Off)
+        .init()
+        .expect("failed to init logger");
+
     let stdin = tokio::io::stdin().compat();
     let stdout = tokio::io::stdout().compat_write();
     let executor = TokioTp::try_from(&mut tokio::runtime::Builder::new())
@@ -47,6 +42,3 @@ fn main() {
     let service = LanguageService::new(stdin, stdout, Server, executor.clone());
     executor.block_on(service.listen());
 }
-```
-
-More examples can be found [here](examples).

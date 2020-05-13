@@ -3,4 +3,5 @@
 members = [
   "language-server",
   "language-server-macros",
+  "examples",
 ]

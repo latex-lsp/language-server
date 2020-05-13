@@ -12,9 +12,6 @@ categories = ["development-tools"]
 keywords = ["lsp"]
 edition = "2018"
 
-[lib]
-doctest = false
-
 [dependencies]
 async-trait = "0.1"
 bytes = "0.5"
@@ -27,3 +24,8 @@ nom = "5.1"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 serde_repr = "0.1"
+
+[dev-dependencies]
+async_executors = { version = "0.2", features = ["tokio_tp"] }
+tokio = "0.2"
+tokio-util = { version = "0.3", features = ["compat"] }
