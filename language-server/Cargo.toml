@@ -1,6 +1,6 @@
 [package]
 name = "language-server"
-description = "A library to implement language servers in Rust."
+description = "A library to implement asynchronous language servers in Rust."
 version = "0.1.0"
 license = "MIT"
 authors = [

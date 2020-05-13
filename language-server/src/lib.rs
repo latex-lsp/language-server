@@ -1,4 +1,8 @@
-//! A library to implement language servers in Rust.
+//! A library to implement asynchronous language servers in Rust.
+//!
+//! It features full support of the
+//! [Language Server Protocol 3.15](https://microsoft.github.io/language-server-protocol/specifications/specification-3-15/)
+//! and is designed to be independent of the underlying transport layer and the used async executor.
 //!
 //! # Example
 //!
