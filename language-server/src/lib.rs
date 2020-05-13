@@ -13,7 +13,7 @@ use crate::{
     client::{LanguageClientImpl, ResponseHandler},
     codec::LspCodec,
     jsonrpc::*,
-    server::RequestHandler,
+    server::{NoOpMiddleware, RequestHandler},
 };
 use futures::{
     channel::mpsc,
@@ -34,6 +34,7 @@ pub struct LanguageService<I, O, S, E> {
     output_rx: mpsc::Receiver<String>,
     server: Arc<S>,
     client: LanguageClientImpl,
+    middleware: Arc<dyn Middleware>,
     executor: E,
 }
 
@@ -41,13 +42,24 @@ impl<I, O, S, E> LanguageService<I, O, S, E>
 where
     I: AsyncRead + Unpin,
     O: AsyncWrite + Send + Unpin + 'static,
-    S: LanguageServer + Middleware + Send + Sync + 'static,
+    S: LanguageServer + Send + Sync + 'static,
     E: Spawn + Clone,
 {
     /// Creates a new `LspService`.
     pub fn new(input: I, output: O, server: S, executor: E) -> Self {
+        let middleware = Arc::new(NoOpMiddleware);
+        Self::with_middleware(input, output, Arc::new(server), executor, middleware)
+    }
+
+    /// Creates a new `LspService` with the given `Middleware`.
+    pub fn with_middleware(
+        input: I,
+        output: O,
+        server: Arc<S>,
+        executor: E,
+        middleware: Arc<dyn Middleware>,
+    ) -> Self {
         let (output_tx, output_rx) = mpsc::channel(0);
-        let server = Arc::new(server);
         let client = LanguageClientImpl::new(output_tx.clone());
 
         Self {
@@ -58,6 +70,7 @@ where
             server,
             client,
             executor,
+            middleware,
         }
     }
 
@@ -82,10 +95,12 @@ where
             let client = self.client.clone();
             let mut output = self.output_tx.clone();
             let executor = self.executor.clone();
+            let middleware = Arc::clone(&self.middleware);
 
             match serde_json::from_str(&json) {
                 Ok(message) => {
-                    Self::handle_message(server, client, output, executor, message).await
+                    Self::handle_message(server, client, output, executor, middleware, message)
+                        .await
                 }
                 Err(_) => {
                     let response = Response::error(Error::parse_error(), None);
@@ -101,9 +116,10 @@ where
         client: LanguageClientImpl,
         mut output: mpsc::Sender<String>,
         executor: E,
+        middleware: Arc<dyn Middleware>,
         message: Message,
     ) {
-        server.before_message(&message).await;
+        middleware.before_message(&message).await;
 
         match message.clone() {
             Message::Request(request) => {
@@ -112,17 +128,17 @@ where
                         let response = server.handle_request(request, &client).await;
                         let json = serde_json::to_string(&response).unwrap();
                         output.send(json).await.unwrap();
-                        server.after_message(&message, Some(&response)).await;
+                        middleware.after_message(&message, Some(&response)).await;
                     })
                     .expect("failed to spawn future");
             }
             Message::Notification(notification) => {
                 server.handle_notification(notification, &client).await;
-                server.after_message(&message, None).await;
+                middleware.after_message(&message, None).await;
             }
             Message::Response(response) => {
                 client.handle(response).await;
-                server.after_message(&message, None).await;
+                middleware.after_message(&message, None).await;
             }
         };
     }
