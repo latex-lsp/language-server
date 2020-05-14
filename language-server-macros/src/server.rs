@@ -55,9 +55,11 @@ fn generate_server_skeletons(items: &Vec<TraitItem>) -> Result<(TokenStream2, To
 
         let ident = &method.sig.ident;
         let name = args.name;
+        let cfg_attrs = method.attrs.iter().filter(|attr| attr.path.is_ident("cfg"));
 
         match args.kind {
             MethodKind::Request => requests.push(quote!(
+                #(#cfg_attrs)*
                 #name => {
                     let handle = |json| async move {
                         let params = serde_json::from_value(json).map_err(|_| Error::deserialize_error())?;
@@ -72,6 +74,7 @@ fn generate_server_skeletons(items: &Vec<TraitItem>) -> Result<(TokenStream2, To
                 }
             )),
             MethodKind::Notification => notifications.push(quote!(
+                #(#cfg_attrs)*
                 #name => {
                     let error = Error::deserialize_error().message;
                     let params = serde_json::from_value(notification.params).expect(&error);
