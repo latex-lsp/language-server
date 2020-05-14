@@ -86,6 +86,12 @@ pub trait LanguageClient: Sync {
     /// are sent from the server to the client to signal results of validation runs.
     #[jsonrpc_method(name = "textDocument/publishDiagnostics", kind = "notification")]
     async fn publish_diagnostics(&self, params: PublishDiagnosticsParams);
+
+    /// The `textDocument/semanticHighlighting` notification is pushed from the server to the client
+    /// to inform the client about additional semantic highlighting information that has to be applied on the text document.
+    #[cfg(feature = "proposed")]
+    #[jsonrpc_method(name = "textDocument/semanticHighlighting", kind = "notification")]
+    async fn semantic_highlighting(&self, params: SemanticHighlightingParams);
 }
 
 #[async_trait]

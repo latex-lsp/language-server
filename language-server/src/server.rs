@@ -479,15 +479,6 @@ pub trait LanguageServer {
     ) -> Result<Option<SemanticTokensRangeResult>> {
         Ok(None)
     }
-
-    #[cfg(feature = "proposed")]
-    #[jsonrpc_method(name = "textDocument/semanticHighlighting", kind = "notification")]
-    async fn semantic_highlighting(
-        &self,
-        params: SemanticHighlightingParams,
-        client: &dyn LanguageClient,
-    ) {
-    }
 }
 
 /// Allows to do additional work before and/or after processing the message.
