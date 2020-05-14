@@ -12,6 +12,10 @@ categories = ["development-tools"]
 keywords = ["lsp"]
 edition = "2018"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [features]
 proposed = ["lsp-types/proposed"]
 

@@ -416,6 +416,7 @@ pub trait LanguageServer {
 
     /// The [call hierarchy request](https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#textDocument_prepareCallHierarchy)
     /// is sent from the client to the server to return a call hierarchy for the language element of given text document positions.
+    #[cfg_attr(docsrs, doc(cfg(feature = "proposed")))]
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "textDocument/prepareCallHierarchy", kind = "request")]
     async fn prepare_call_hierarchy(
@@ -428,6 +429,7 @@ pub trait LanguageServer {
 
     /// The [request](https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#callHierarchy_incomingCalls)
     /// is sent from the client to the server to resolve incoming calls for a given call hierarchy item.
+    #[cfg_attr(docsrs, doc(cfg(feature = "proposed")))]
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "callHierarchy/incomingCalls", kind = "request")]
     async fn call_hierarchy_incoming(
@@ -440,6 +442,7 @@ pub trait LanguageServer {
 
     /// The [request](https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#callHierarchy_outgoingCalls)
     /// is sent from the client to the server to resolve outgoing calls for a given call hierarchy item.
+    #[cfg_attr(docsrs, doc(cfg(feature = "proposed")))]
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "callHierarchy/outgoingCalls", kind = "request")]
     async fn call_hierarchy_outgoing(
@@ -452,6 +455,7 @@ pub trait LanguageServer {
 
     /// The `textDocument/semanticTokens` request is sent from the client to the server
     /// to request the semantic tokens of an entire text document.
+    #[cfg_attr(docsrs, doc(cfg(feature = "proposed")))]
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "textDocument/semanticTokens", kind = "request")]
     async fn semantic_tokens(
@@ -464,6 +468,7 @@ pub trait LanguageServer {
 
     /// The `textDocument/semanticTokens/edits` request is sent from the client to the server
     /// to request a delta change of the semantic tokens of an entire text document.
+    #[cfg_attr(docsrs, doc(cfg(feature = "proposed")))]
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "textDocument/semanticTokens/edits", kind = "request")]
     async fn semantic_tokens_edit(
@@ -476,6 +481,7 @@ pub trait LanguageServer {
 
     /// The `textDocument/semanticTokens/range` request is sent from the client to the server
     /// to request the semantic tokens of an arbitrary range within the entire text document.
+    #[cfg_attr(docsrs, doc(cfg(feature = "proposed")))]
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "textDocument/semanticTokens/range", kind = "request")]
     async fn semantic_tokens_range(

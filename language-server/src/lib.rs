@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 //! A library to implement asynchronous language servers in Rust.
 //!
 //! It features full support of the

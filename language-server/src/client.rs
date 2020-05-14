@@ -89,6 +89,7 @@ pub trait LanguageClient: Sync {
 
     /// The `textDocument/semanticHighlighting` notification is pushed from the server to the client
     /// to inform the client about additional semantic highlighting information that has to be applied on the text document.
+    #[cfg_attr(docsrs, doc(cfg(feature = "proposed")))]
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "textDocument/semanticHighlighting", kind = "notification")]
     async fn semantic_highlighting(&self, params: SemanticHighlightingParams);
