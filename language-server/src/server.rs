@@ -450,6 +450,8 @@ pub trait LanguageServer {
         Ok(Vec::new())
     }
 
+    /// The `textDocument/semanticTokens` request is sent from the client to the server
+    /// to request the semantic tokens of an entire text document.
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "textDocument/semanticTokens", kind = "request")]
     async fn semantic_tokens(
@@ -460,6 +462,8 @@ pub trait LanguageServer {
         Ok(None)
     }
 
+    /// The `textDocument/semanticTokens/edits` request is sent from the client to the server
+    /// to request a delta change of the semantic tokens of an entire text document.
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "textDocument/semanticTokens/edits", kind = "request")]
     async fn semantic_tokens_edit(
@@ -470,6 +474,8 @@ pub trait LanguageServer {
         Ok(None)
     }
 
+    /// The `textDocument/semanticTokens/range` request is sent from the client to the server
+    /// to request the semantic tokens of an arbitrary range within the entire text document.
     #[cfg(feature = "proposed")]
     #[jsonrpc_method(name = "textDocument/semanticTokens/range", kind = "request")]
     async fn semantic_tokens_range(
