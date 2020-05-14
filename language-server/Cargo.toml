@@ -12,6 +12,9 @@ categories = ["development-tools"]
 keywords = ["lsp"]
 edition = "2018"
 
+[features]
+proposed = ["lsp-types/proposed"]
+
 [dependencies]
 async-trait = "0.1"
 bytes = "0.5"

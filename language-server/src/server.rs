@@ -413,6 +413,81 @@ pub trait LanguageServer {
     ) -> Result<Vec<SelectionRange>> {
         Ok(Vec::new())
     }
+
+    /// The [call hierarchy request](https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#textDocument_prepareCallHierarchy)
+    /// is sent from the client to the server to return a call hierarchy for the language element of given text document positions.
+    #[cfg(feature = "proposed")]
+    #[jsonrpc_method(name = "textDocument/prepareCallHierarchy", kind = "request")]
+    async fn prepare_call_hierarchy(
+        &self,
+        params: CallHierarchyPrepareParams,
+        client: &dyn LanguageClient,
+    ) -> Result<Vec<CallHierarchyItem>> {
+        Ok(Vec::new())
+    }
+
+    /// The [request](https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#callHierarchy_incomingCalls)
+    /// is sent from the client to the server to resolve incoming calls for a given call hierarchy item.
+    #[cfg(feature = "proposed")]
+    #[jsonrpc_method(name = "callHierarchy/incomingCalls", kind = "request")]
+    async fn call_hierarchy_incoming(
+        &self,
+        params: CallHierarchyIncomingCallsParams,
+        client: &dyn LanguageClient,
+    ) -> Result<Vec<CallHierarchyIncomingCall>> {
+        Ok(Vec::new())
+    }
+
+    /// The [request](https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#callHierarchy_outgoingCalls)
+    /// is sent from the client to the server to resolve outgoing calls for a given call hierarchy item.
+    #[cfg(feature = "proposed")]
+    #[jsonrpc_method(name = "callHierarchy/outgoingCalls", kind = "request")]
+    async fn call_hierarchy_outgoing(
+        &self,
+        params: CallHierarchyOutgoingCallsParams,
+        client: &dyn LanguageClient,
+    ) -> Result<Vec<CallHierarchyOutgoingCall>> {
+        Ok(Vec::new())
+    }
+
+    #[cfg(feature = "proposed")]
+    #[jsonrpc_method(name = "textDocument/semanticTokens", kind = "request")]
+    async fn semantic_tokens(
+        &self,
+        params: SemanticTokensParams,
+        client: &dyn LanguageClient,
+    ) -> Result<Option<SemanticTokensResult>> {
+        Ok(None)
+    }
+
+    #[cfg(feature = "proposed")]
+    #[jsonrpc_method(name = "textDocument/semanticTokens/edits", kind = "request")]
+    async fn semantic_tokens_edit(
+        &self,
+        params: SemanticTokensEditsParams,
+        client: &dyn LanguageClient,
+    ) -> Result<Option<SemanticTokensEditResult>> {
+        Ok(None)
+    }
+
+    #[cfg(feature = "proposed")]
+    #[jsonrpc_method(name = "textDocument/semanticTokens/range", kind = "request")]
+    async fn semantic_tokens_range(
+        &self,
+        params: SemanticTokensRangeParams,
+        client: &dyn LanguageClient,
+    ) -> Result<Option<SemanticTokensRangeResult>> {
+        Ok(None)
+    }
+
+    #[cfg(feature = "proposed")]
+    #[jsonrpc_method(name = "textDocument/semanticHighlighting", kind = "notification")]
+    async fn semantic_highlighting(
+        &self,
+        params: SemanticHighlightingParams,
+        client: &dyn LanguageClient,
+    ) {
+    }
 }
 
 /// Allows to do additional work before and/or after processing the message.
