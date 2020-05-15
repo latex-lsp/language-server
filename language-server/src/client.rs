@@ -166,3 +166,86 @@ impl ResponseHandler for Client {
         result_tx.send(result).unwrap();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures::future::{join, join3};
+
+    #[tokio::test]
+    async fn notification() {
+        let (tx, mut rx) = mpsc::channel(0);
+        let client = Client::new(tx);
+        let ((), output) = join(client.send_notification("foo".into(), 42u64), rx.next()).await;
+        assert_eq!(
+            output.unwrap(),
+            r#"{"jsonrpc":"2.0","method":"foo","params":42}"#
+        );
+    }
+
+    #[tokio::test]
+    async fn request_success() {
+        let (tx, mut rx) = mpsc::channel(0);
+        let client = Client::new(tx);
+        let (response, output, ()) = join3(
+            client.send_request("foo".into(), 42u64),
+            rx.next(),
+            client.handle(Response::result(
+                serde_json::to_value(1337u64).unwrap(),
+                Id::Number(0),
+            )),
+        )
+        .await;
+        assert_eq!(
+            output.unwrap(),
+            r#"{"jsonrpc":"2.0","method":"foo","params":42,"id":0}"#
+        );
+        assert_eq!(
+            serde_json::from_value::<u64>(response.unwrap()).unwrap(),
+            1337
+        );
+    }
+
+    #[tokio::test]
+    async fn request_failure() {
+        let (tx, mut rx) = mpsc::channel(0);
+        let client = Client::new(tx);
+        let (response, output, ()) = join3(
+            client.send_request("foo".into(), 42u64),
+            rx.next(),
+            client.handle(Response::error(
+                Error::internal_error("bar".into()),
+                Some(Id::Number(0)),
+            )),
+        )
+        .await;
+        assert_eq!(
+            output.unwrap(),
+            r#"{"jsonrpc":"2.0","method":"foo","params":42,"id":0}"#
+        );
+        assert_eq!(response.unwrap_err(), Error::internal_error("bar".into()));
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "Unexpected response received")]
+    async fn request_unexpected_response() {
+        let (tx, _) = mpsc::channel(0);
+        let client = Client::new(tx);
+        client
+            .handle(Response::error(
+                Error::internal_error("bar".into()),
+                Some(Id::Number(42)),
+            ))
+            .await;
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "Expected response with id")]
+    async fn request_response_without_id() {
+        let (tx, _) = mpsc::channel(0);
+        let client = Client::new(tx);
+        client
+            .handle(Response::error(Error::internal_error("bar".into()), None))
+            .await;
+    }
+}
