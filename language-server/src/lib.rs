@@ -12,7 +12,7 @@
 //!
 //! ```no_run
 //! use async_executors::TokioTp;
-//! use language_server::{async_trait::async_trait, jsonrpc::Result, types::*, *};
+//! use language_server::{async_trait::async_trait, types::*, *};
 //! use std::convert::TryFrom;
 //! use tokio_util::compat::*;
 //!
@@ -54,6 +54,7 @@ pub mod jsonrpc;
 mod server;
 
 pub use client::LanguageClient;
+pub use jsonrpc::Result;
 pub use server::{LanguageServer, Middleware};
 
 pub use async_trait;

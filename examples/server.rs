@@ -1,5 +1,5 @@
 use async_executors::TokioTp;
-use language_server::{async_trait::async_trait, jsonrpc::Result, types::*, *};
+use language_server::{async_trait::async_trait, types::*, *};
 use std::convert::TryFrom;
 use tokio_util::compat::*;
 

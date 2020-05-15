@@ -1,5 +1,5 @@
 use async_executors::AsyncStd;
-use language_server::{async_trait::async_trait, jsonrpc::Result, types::*, *};
+use language_server::{async_trait::async_trait, types::*, *};
 
 struct Server;
 
