@@ -51,11 +51,12 @@
 mod client;
 mod codec;
 pub mod jsonrpc;
+pub mod middleware;
 mod server;
 
 pub use client::LanguageClient;
 pub use jsonrpc::Result;
-pub use server::{LanguageServer, Middleware};
+pub use server::LanguageServer;
 
 pub use async_trait;
 pub use lsp_types as types;
@@ -64,7 +65,8 @@ use crate::{
     client::{LanguageClientImpl, ResponseHandler},
     codec::LspCodec,
     jsonrpc::*,
-    server::{NoOpMiddleware, RequestHandler},
+    middleware::{Middleware, NoOpMiddleware},
+    server::RequestHandler,
 };
 use futures::{
     channel::mpsc,
@@ -81,8 +83,8 @@ use std::sync::Arc;
 pub struct LanguageService<I, O, S, E> {
     input: I,
     output: O,
-    output_tx: mpsc::Sender<String>,
-    output_rx: mpsc::Receiver<String>,
+    output_tx: mpsc::Sender<Message>,
+    output_rx: mpsc::Receiver<Message>,
     server: Arc<S>,
     client: LanguageClientImpl,
     middleware: Arc<dyn Middleware>,
@@ -130,12 +132,24 @@ where
     pub async fn listen(self) {
         let output = self.output;
         let mut output_rx = self.output_rx;
+        let middleware = Arc::clone(&self.middleware);
         self.executor
             .spawn(async move {
                 let mut output = FramedWrite::new(output, LspCodec);
-                loop {
-                    let message = output_rx.next().await.unwrap();
-                    output.send(message).await.unwrap();
+                while let Some(mut message) = output_rx.next().await {
+                    match &mut message {
+                        Message::Request(ref mut request) => {
+                            middleware.on_outgoing_request(request).await;
+                        }
+                        Message::Notification(ref mut notification) => {
+                            middleware.on_outgoing_notification(notification).await;
+                        }
+                        Message::Response(_) => {}
+                    };
+
+                    let json =
+                        serde_json::to_string(&message).expect("failed to serialize message");
+                    output.send(json).await.expect("failed to send message");
                 }
             })
             .expect("failed to spawn future");
@@ -155,8 +169,7 @@ where
                 }
                 Err(_) => {
                     let response = Response::error(Error::parse_error(), None);
-                    let json = serde_json::to_string(&response).unwrap();
-                    output.send(json).await.unwrap();
+                    output.send(Message::Response(response)).await.unwrap();
                 }
             };
         }
@@ -165,31 +178,31 @@ where
     async fn handle_message(
         server: Arc<S>,
         client: LanguageClientImpl,
-        mut output: mpsc::Sender<String>,
+        mut output: mpsc::Sender<Message>,
         executor: E,
         middleware: Arc<dyn Middleware>,
-        message: Message,
+        mut message: Message,
     ) {
-        middleware.before_message(&message).await;
+        middleware.on_incoming_message(&mut message).await;
 
-        match message.clone() {
+        match message {
             Message::Request(request) => {
                 executor
                     .spawn(async move {
-                        let response = server.handle_request(request, &client).await;
-                        let json = serde_json::to_string(&response).unwrap();
-                        output.send(json).await.unwrap();
-                        middleware.after_message(&message, Some(&response)).await;
+                        let mut response = server.handle_request(request.clone(), &client).await;
+                        middleware
+                            .on_outgoing_response(&request, &mut response)
+                            .await;
+
+                        output.send(Message::Response(response)).await.unwrap();
                     })
                     .expect("failed to spawn future");
             }
             Message::Notification(notification) => {
                 server.handle_notification(notification, &client).await;
-                middleware.after_message(&message, None).await;
             }
             Message::Response(response) => {
                 client.handle(response).await;
-                middleware.after_message(&message, None).await;
             }
         };
     }

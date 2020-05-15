@@ -102,13 +102,13 @@ pub trait ResponseHandler {
 
 #[derive(Debug)]
 pub struct Client {
-    output: mpsc::Sender<String>,
+    output: mpsc::Sender<Message>,
     request_id: AtomicU64,
     senders_by_id: Mutex<HashMap<Id, oneshot::Sender<Result<serde_json::Value>>>>,
 }
 
 impl Client {
-    pub fn new(output: mpsc::Sender<String>) -> Self {
+    pub fn new(output: mpsc::Sender<Message>) -> Self {
         Self {
             output,
             request_id: AtomicU64::new(0),
@@ -130,20 +130,19 @@ impl Client {
             senders_by_id.insert(request.id.clone(), result_tx);
         }
 
-        self.send(Message::Request(request)).await;
+        let mut output = self.output.clone();
+        output.send(Message::Request(request)).await.unwrap();
 
         result_rx.await.unwrap()
     }
 
     pub async fn send_notification<T: Serialize>(&self, method: String, params: T) {
         let notification = Notification::new(method, json!(params));
-        self.send(Message::Notification(notification)).await;
-    }
-
-    async fn send(&self, message: Message) {
         let mut output = self.output.clone();
-        let json = serde_json::to_string(&message).unwrap();
-        output.send(json).await.unwrap();
+        output
+            .send(Message::Notification(notification))
+            .await
+            .unwrap();
     }
 }
 
@@ -177,9 +176,10 @@ mod tests {
         let (tx, mut rx) = mpsc::channel(0);
         let client = Client::new(tx);
         let ((), output) = join(client.send_notification("foo".into(), 42u64), rx.next()).await;
+
         assert_eq!(
             output.unwrap(),
-            r#"{"jsonrpc":"2.0","method":"foo","params":42}"#
+            Message::Notification(Notification::new("foo".to_owned(), json!(42)))
         );
     }
 
@@ -198,7 +198,7 @@ mod tests {
         .await;
         assert_eq!(
             output.unwrap(),
-            r#"{"jsonrpc":"2.0","method":"foo","params":42,"id":0}"#
+            Message::Request(Request::new("foo".to_owned(), json!(42), Id::Number(0)))
         );
         assert_eq!(
             serde_json::from_value::<u64>(response.unwrap()).unwrap(),
@@ -221,7 +221,7 @@ mod tests {
         .await;
         assert_eq!(
             output.unwrap(),
-            r#"{"jsonrpc":"2.0","method":"foo","params":42,"id":0}"#
+            Message::Request(Request::new("foo".to_owned(), json!(42), Id::Number(0)))
         );
         assert_eq!(response.unwrap_err(), Error::internal_error("bar".into()));
     }

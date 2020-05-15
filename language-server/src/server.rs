@@ -493,25 +493,6 @@ pub trait LanguageServer {
     }
 }
 
-/// Allows to do additional work before and/or after processing the message.
-#[async_trait]
-pub trait Middleware: Send + Sync {
-    /// Method invoked before a message is being processed.
-    async fn before_message(&self, message: &Message);
-
-    /// Method invoked after a message was processed.
-    async fn after_message(&self, message: &Message, response: Option<&Response>);
-}
-
-pub struct NoOpMiddleware;
-
-#[async_trait]
-impl Middleware for NoOpMiddleware {
-    async fn before_message(&self, _message: &Message) {}
-
-    async fn after_message(&self, _message: &Message, _responsee: Option<&Response>) {}
-}
-
 #[async_trait]
 pub trait RequestHandler<C>
 where

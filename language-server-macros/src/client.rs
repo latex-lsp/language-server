@@ -27,7 +27,7 @@ pub fn jsonrpc_client(attr: AttributeArgs, trait_: ItemTrait) -> Result<TokenStr
 
         impl #struct_ident
         {
-            pub fn new(output: futures::channel::mpsc::Sender<String>) -> Self {
+            pub fn new(output: futures::channel::mpsc::Sender<Message>) -> Self {
                 Self {
                     client: std::sync::Arc::new(Client::new(output)),
                 }
