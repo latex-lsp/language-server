@@ -23,12 +23,12 @@
 //!     async fn initialize(
 //!         &self,
 //!         _params: InitializeParams,
-//!         _client: &dyn LanguageClient,
+//!         _client: Arc<dyn LanguageClient>,
 //!     ) -> Result<InitializeResult> {
 //!         Ok(InitializeResult::default())
 //!     }
 //!
-//!     async fn initialized(&self, _params: InitializedParams, client: &dyn LanguageClient) {
+//!     async fn initialized(&self, _params: InitializedParams, client: Arc<dyn LanguageClient>) {
 //!         let params = ShowMessageParams {
 //!             typ: MessageType::Info,
 //!             message: "Hello World!".to_owned(),
@@ -147,11 +147,11 @@ where
                 .expect("failed to spawn future");
         }
 
-        let client = LanguageClientImpl::new(output_tx.clone());
+        let client = Arc::new(LanguageClientImpl::new(output_tx.clone()));
         let mut input = FramedRead::new(self.input, LspCodec);
         while let Some(Ok(json)) = input.next().await {
             let server = Arc::clone(&self.server);
-            let client = client.clone();
+            let client = Arc::clone(&client);
             let mut output = output_tx.clone();
             let executor = self.executor.clone();
             let middleware = middleware.clone();
@@ -171,7 +171,7 @@ where
 
     async fn handle_message(
         server: Arc<S>,
-        client: LanguageClientImpl,
+        client: Arc<LanguageClientImpl>,
         mut output: mpsc::Sender<Message>,
         executor: E,
         middleware: AggregateMiddleware,
@@ -183,7 +183,7 @@ where
             Message::Request(request) => {
                 executor
                     .spawn(async move {
-                        let mut response = server.handle_request(request.clone(), &client).await;
+                        let mut response = server.handle_request(request.clone(), client).await;
                         middleware
                             .on_outgoing_response(&request, &mut response)
                             .await;
@@ -193,7 +193,7 @@ where
                     .expect("failed to spawn future");
             }
             Message::Notification(notification) => {
-                server.handle_notification(notification, &client).await;
+                server.handle_notification(notification, client).await;
             }
             Message::Response(response) => {
                 client.handle(response).await;

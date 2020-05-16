@@ -9,12 +9,12 @@ impl LanguageServer for Server {
     async fn initialize(
         &self,
         _params: InitializeParams,
-        _client: &dyn LanguageClient,
+        _client: Arc<dyn LanguageClient>,
     ) -> Result<InitializeResult> {
         Ok(InitializeResult::default())
     }
 
-    async fn initialized(&self, _params: InitializedParams, client: &dyn LanguageClient) {
+    async fn initialized(&self, _params: InitializedParams, client: Arc<dyn LanguageClient>) {
         let params = ShowMessageParams {
             typ: MessageType::Info,
             message: "Hello World!".to_owned(),

@@ -20,16 +20,16 @@ pub fn jsonrpc_client(attr: AttributeArgs, trait_: ItemTrait) -> Result<TokenStr
     let tokens = quote! {
         #trait_
 
-        #[derive(Debug, Clone)]
+        #[derive(Debug)]
         pub struct #struct_ident {
-            client: std::sync::Arc<Client>
+            client: Client
         }
 
         impl #struct_ident
         {
             pub fn new(output: futures::channel::mpsc::Sender<Message>) -> Self {
                 Self {
-                    client: std::sync::Arc::new(Client::new(output)),
+                    client: Client::new(output),
                 }
             }
         }
