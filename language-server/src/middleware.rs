@@ -49,3 +49,43 @@ impl Middleware for AggregateMiddleware {
         }
     }
 }
+
+/// Middleware that logs every incoming and outgoing message.
+///
+/// Each message is logged with the "trace" level.
+pub struct LoggingMiddleware;
+
+impl LoggingMiddleware {
+    fn log_message<T>(message: T, text: &str)
+    where
+        T: serde::Serialize,
+    {
+        let json = serde_json::to_string_pretty(&message).expect("failed to serialize value");
+        log::trace!("{}:\n{}\n", text, json);
+    }
+}
+
+#[async_trait]
+impl Middleware for LoggingMiddleware {
+    async fn on_incoming_message(&self, message: &mut Message) {
+        let kind = match message {
+            Message::Request(_) => "request",
+            Message::Notification(_) => "notification",
+            Message::Response(_) => "response",
+        };
+
+        Self::log_message(message, &format!("Received {} (->)", kind));
+    }
+
+    async fn on_outgoing_response(&self, _request: &Request, response: &mut Response) {
+        Self::log_message(response, "Sent response (<-)");
+    }
+
+    async fn on_outgoing_request(&self, request: &mut Request) {
+        Self::log_message(request, "Sent request (<-)");
+    }
+
+    async fn on_outgoing_notification(&self, notification: &mut Notification) {
+        Self::log_message(notification, "Sent notification (<-)");
+    }
+}

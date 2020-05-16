@@ -61,7 +61,7 @@ mod server;
 
 pub use client::LanguageClient;
 pub use jsonrpc::Result;
-pub use middleware::Middleware;
+pub use middleware::{LoggingMiddleware, Middleware};
 pub use server::LanguageServer;
 
 pub use async_trait;
