@@ -87,15 +87,24 @@ use typed_builder::TypedBuilder;
 
 /// Represents a service that processes messages according to the
 /// [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specification).
-#[builder(doc)]
+#[builder(builder_type_doc = "A builder to construct a `LanguageService`.")]
+#[builder(builder_method_doc = "Returns a builder for constructing a new `LanguageService`.")]
 #[derive(TypedBuilder)]
 pub struct LanguageService<I, O, S, E> {
+    #[builder(setter(doc = "Sets the input stream for the service."))]
     input: I,
+
+    #[builder(setter(doc = "Sets the output sink for the service."))]
     output: O,
+
+    #[builder(setter(doc = "Sets the language server for the service."))]
     server: Arc<S>,
+
+    #[builder(setter(doc = "Sets the executor on which futures are spawned."))]
     executor: E,
 
     #[builder(default)]
+    #[builder(setter(doc = "Attaches multiple middlewares to the service."))]
     middlewares: Vec<Arc<dyn Middleware>>,
 }
 
