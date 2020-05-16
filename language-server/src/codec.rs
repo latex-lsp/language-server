@@ -1,6 +1,5 @@
 use bytes::{BufMut, BytesMut};
 use futures_codec::{Decoder, Encoder};
-use log::trace;
 use std::io::{Error, ErrorKind};
 
 pub struct LspCodec;
@@ -12,8 +11,6 @@ impl Decoder for LspCodec {
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         match parser::parse(src) {
             Ok((remaining, content)) => {
-                trace!("Received message:\n{}\n", content);
-
                 let offset = src.len() - remaining.len();
                 let _ = src.split_to(offset);
                 Ok(Some(content))
@@ -35,8 +32,6 @@ impl Encoder for LspCodec {
 
     fn encode(&mut self, item: String, dst: &mut BytesMut) -> Result<(), Self::Error> {
         let message = format!("Content-Length: {}\r\n\r\n{}", item.len(), item);
-        trace!("Sent message:\n{}\n", message);
-
         dst.reserve(message.len());
         dst.put(message.as_bytes());
         Ok(())
