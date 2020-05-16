@@ -20,8 +20,8 @@ A simple language server using the [Tokio](https://tokio.rs/) runtime:
 
 ```rust
 use async_executors::TokioTp;
-use language_server::{async_trait::async_trait, jsonrpc::Result, types::*, *};
-use std::convert::TryFrom;
+use language_server::{async_trait::async_trait, types::*, *};
+use std::{convert::TryFrom, sync::Arc};
 use tokio_util::compat::*;
 
 struct Server;
@@ -30,13 +30,13 @@ struct Server;
 impl LanguageServer for Server {
     async fn initialize(
         &self,
-        _params: InitializedParams,
-        _client: &dyn LanguageClient,
+        _params: InitializeParams,
+        _client: Arc<dyn LanguageClient>,
     ) -> Result<InitializeResult> {
         Ok(InitializeResult::default())
     }
 
-    async fn initialized(&self, _params: InitializedParams, client: &dyn LanguageClient) {
+    async fn initialized(&self, _params: InitializedParams, client: Arc<dyn LanguageClient>) {
         let params = ShowMessageParams {
             typ: MessageType::Info,
             message: "Hello World!".to_owned(),
@@ -47,13 +47,26 @@ impl LanguageServer for Server {
 }
 
 fn main() {
-    let stdin = tokio::io::stdin().compat();
-    let stdout = tokio::io::stdout().compat_write();
+    stderrlog::new()
+        .module(module_path!())
+        .module("language_server")
+        .verbosity(5)
+        .timestamp(stderrlog::Timestamp::Off)
+        .init()
+        .expect("failed to init logger");
+
     let executor = TokioTp::try_from(&mut tokio::runtime::Builder::new())
         .expect("failed to create thread pool");
 
-    let service = LanguageService::new(stdin, stdout, Server, executor.clone());
-    executor.block_on(service.listen());
+    executor.block_on(
+        LanguageService::builder()
+            .server(Arc::new(Server))
+            .input(tokio::io::stdin().compat())
+            .output(tokio::io::stdout().compat_write())
+            .executor(executor.clone())
+            .build()
+            .listen(),
+    );
 }
 ```
 
