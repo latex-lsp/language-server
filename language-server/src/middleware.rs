@@ -1,6 +1,6 @@
-//! Middleware support for the `LanguageService`.
 use crate::jsonrpc::*;
 use async_trait::async_trait;
+use std::sync::Arc;
 
 /// Allows to do additional work before and/or after processing the message.
 #[async_trait]
@@ -18,16 +18,42 @@ pub trait Middleware: Send + Sync {
     async fn on_outgoing_notification(&self, notification: &mut Notification);
 }
 
-/// Empty middleware implementation.
-pub struct NoOpMiddleware;
+#[derive(Clone)]
+pub struct AggregateMiddleware {
+    pub middlewares: Vec<Arc<dyn Middleware>>,
+}
+
+impl AggregateMiddleware {
+    pub fn new() -> Self {
+        Self {
+            middlewares: Vec::new(),
+        }
+    }
+}
 
 #[async_trait]
-impl Middleware for NoOpMiddleware {
-    async fn on_incoming_message(&self, _message: &mut Message) {}
+impl Middleware for AggregateMiddleware {
+    async fn on_incoming_message(&self, message: &mut Message) {
+        for middleware in &self.middlewares {
+            middleware.on_incoming_message(message).await;
+        }
+    }
 
-    async fn on_outgoing_response(&self, _request: &Request, _response: &mut Response) {}
+    async fn on_outgoing_response(&self, request: &Request, response: &mut Response) {
+        for middleware in &self.middlewares {
+            middleware.on_outgoing_response(request, response).await;
+        }
+    }
 
-    async fn on_outgoing_request(&self, _request: &mut Request) {}
+    async fn on_outgoing_request(&self, request: &mut Request) {
+        for middleware in &self.middlewares {
+            middleware.on_outgoing_request(request).await;
+        }
+    }
 
-    async fn on_outgoing_notification(&self, _notification: &mut Notification) {}
+    async fn on_outgoing_notification(&self, notification: &mut Notification) {
+        for middleware in &self.middlewares {
+            middleware.on_outgoing_notification(notification).await;
+        }
+    }
 }

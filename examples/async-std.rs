@@ -1,5 +1,6 @@
 use async_executors::AsyncStd;
 use language_server::{async_trait::async_trait, types::*, *};
+use std::sync::Arc;
 
 struct Server;
 
@@ -34,6 +35,6 @@ fn main() {
 
     let stdin = async_std::io::stdin();
     let stdout = async_std::io::stdout();
-    let service = LanguageService::new(stdin, stdout, Server, AsyncStd);
+    let service = LanguageService::new(stdin, stdout, Arc::new(Server), AsyncStd);
     AsyncStd::block_on(service.listen());
 }

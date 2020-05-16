@@ -13,7 +13,7 @@
 //! ```no_run
 //! use async_executors::TokioTp;
 //! use language_server::{async_trait::async_trait, types::*, *};
-//! use std::convert::TryFrom;
+//! use std::{convert::TryFrom, sync::Arc};
 //! use tokio_util::compat::*;
 //!
 //! struct Server;
@@ -44,18 +44,19 @@
 //!     let executor = TokioTp::try_from(&mut tokio::runtime::Builder::new())
 //!         .expect("failed to create thread pool");
 //!
-//!     let service = LanguageService::new(stdin, stdout, Server, executor.clone());
+//!     let service = LanguageService::new(stdin, stdout, Arc::new(Server), executor.clone());
 //!     executor.block_on(service.listen());
 //! }
 //! ```
 mod client;
 mod codec;
 pub mod jsonrpc;
-pub mod middleware;
+mod middleware;
 mod server;
 
 pub use client::LanguageClient;
 pub use jsonrpc::Result;
+pub use middleware::Middleware;
 pub use server::LanguageServer;
 
 pub use async_trait;
@@ -65,7 +66,7 @@ use crate::{
     client::{LanguageClientImpl, ResponseHandler},
     codec::LspCodec,
     jsonrpc::*,
-    middleware::{Middleware, NoOpMiddleware},
+    middleware::AggregateMiddleware,
     server::RequestHandler,
 };
 use futures::{
@@ -87,7 +88,7 @@ pub struct LanguageService<I, O, S, E> {
     output_rx: mpsc::Receiver<Message>,
     server: Arc<S>,
     client: LanguageClientImpl,
-    middleware: Arc<dyn Middleware>,
+    middleware: AggregateMiddleware,
     executor: E,
 }
 
@@ -99,19 +100,7 @@ where
     E: Spawn + Clone,
 {
     /// Creates a new `LspService`.
-    pub fn new(input: I, output: O, server: S, executor: E) -> Self {
-        let middleware = Arc::new(NoOpMiddleware);
-        Self::with_middleware(input, output, Arc::new(server), executor, middleware)
-    }
-
-    /// Creates a new `LspService` with the given `Middleware`.
-    pub fn with_middleware(
-        input: I,
-        output: O,
-        server: Arc<S>,
-        executor: E,
-        middleware: Arc<dyn Middleware>,
-    ) -> Self {
+    pub fn new(input: I, output: O, server: Arc<S>, executor: E) -> Self {
         let (output_tx, output_rx) = mpsc::channel(0);
         let client = LanguageClientImpl::new(output_tx.clone());
 
@@ -123,8 +112,14 @@ where
             server,
             client,
             executor,
-            middleware,
+            middleware: AggregateMiddleware::new(),
         }
+    }
+
+    /// Attaches a middleware to the service.
+    pub fn middleware(mut self, middleware: Arc<dyn Middleware>) -> Self {
+        self.middleware.middlewares.push(middleware);
+        self
     }
 
     /// Starts the service and processes messages.
@@ -132,7 +127,7 @@ where
     pub async fn listen(self) {
         let output = self.output;
         let mut output_rx = self.output_rx;
-        let middleware = Arc::clone(&self.middleware);
+        let middleware = self.middleware.clone();
         self.executor
             .spawn(async move {
                 let mut output = FramedWrite::new(output, LspCodec);
@@ -160,7 +155,7 @@ where
             let client = self.client.clone();
             let mut output = self.output_tx.clone();
             let executor = self.executor.clone();
-            let middleware = Arc::clone(&self.middleware);
+            let middleware = self.middleware.clone();
 
             match serde_json::from_str(&json) {
                 Ok(message) => {
@@ -180,7 +175,7 @@ where
         client: LanguageClientImpl,
         mut output: mpsc::Sender<Message>,
         executor: E,
-        middleware: Arc<dyn Middleware>,
+        middleware: AggregateMiddleware,
         mut message: Message,
     ) {
         middleware.on_incoming_message(&mut message).await;

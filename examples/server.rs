@@ -1,6 +1,6 @@
 use async_executors::TokioTp;
 use language_server::{async_trait::async_trait, types::*, *};
-use std::convert::TryFrom;
+use std::{convert::TryFrom, sync::Arc};
 use tokio_util::compat::*;
 
 struct Server;
@@ -38,7 +38,6 @@ fn main() {
     let stdout = tokio::io::stdout().compat_write();
     let executor = TokioTp::try_from(&mut tokio::runtime::Builder::new())
         .expect("failed to create thread pool");
-
-    let service = LanguageService::new(stdin, stdout, Server, executor.clone());
+    let service = LanguageService::new(stdin, stdout, Arc::new(Server), executor.clone());
     executor.block_on(service.listen());
 }
