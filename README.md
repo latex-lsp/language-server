@@ -47,14 +47,6 @@ impl LanguageServer for Server {
 }
 
 fn main() {
-    stderrlog::new()
-        .module(module_path!())
-        .module("language_server")
-        .verbosity(5)
-        .timestamp(stderrlog::Timestamp::Off)
-        .init()
-        .expect("failed to init logger");
-
     let executor = TokioTp::try_from(&mut tokio::runtime::Builder::new())
         .expect("failed to create thread pool");
 

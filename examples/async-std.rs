@@ -25,14 +25,6 @@ impl LanguageServer for Server {
 }
 
 fn main() {
-    stderrlog::new()
-        .module(module_path!())
-        .module("language_server")
-        .verbosity(5)
-        .timestamp(stderrlog::Timestamp::Off)
-        .init()
-        .expect("failed to init logger");
-
     AsyncStd::block_on(
         LanguageService::builder()
             .server(Arc::new(Server))
