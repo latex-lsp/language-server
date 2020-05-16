@@ -23,14 +23,6 @@ pub struct AggregateMiddleware {
     pub middlewares: Vec<Arc<dyn Middleware>>,
 }
 
-impl AggregateMiddleware {
-    pub fn new() -> Self {
-        Self {
-            middlewares: Vec::new(),
-        }
-    }
-}
-
 #[async_trait]
 impl Middleware for AggregateMiddleware {
     async fn on_incoming_message(&self, message: &mut Message) {

@@ -39,13 +39,18 @@
 //! }
 //!
 //! fn main() {
-//!     let stdin = tokio::io::stdin().compat();
-//!     let stdout = tokio::io::stdout().compat_write();
 //!     let executor = TokioTp::try_from(&mut tokio::runtime::Builder::new())
 //!         .expect("failed to create thread pool");
 //!
-//!     let service = LanguageService::new(stdin, stdout, Arc::new(Server), executor.clone());
-//!     executor.block_on(service.listen());
+//!     executor.block_on(
+//!         LanguageService::builder()
+//!             .server(Arc::new(Server))
+//!             .input(tokio::io::stdin().compat())
+//!             .output(tokio::io::stdout().compat_write())
+//!             .executor(executor.clone())
+//!             .build()
+//!             .listen(),
+//!     );
 //! }
 //! ```
 mod client;
@@ -78,18 +83,20 @@ use futures::{
 };
 use futures_codec::{FramedRead, FramedWrite};
 use std::sync::Arc;
+use typed_builder::TypedBuilder;
 
 /// Represents a service that processes messages according to the
 /// [Language Server Protocol](https://microsoft.github.io/language-server-protocol/specification).
+#[builder(doc)]
+#[derive(TypedBuilder)]
 pub struct LanguageService<I, O, S, E> {
     input: I,
     output: O,
-    output_tx: mpsc::Sender<Message>,
-    output_rx: mpsc::Receiver<Message>,
     server: Arc<S>,
-    client: LanguageClientImpl,
-    middleware: AggregateMiddleware,
     executor: E,
+
+    #[builder(default)]
+    middlewares: Vec<Arc<dyn Middleware>>,
 }
 
 impl<I, O, S, E> LanguageService<I, O, S, E>
@@ -99,63 +106,46 @@ where
     S: LanguageServer + Send + Sync + 'static,
     E: Spawn + Clone,
 {
-    /// Creates a new `LspService`.
-    pub fn new(input: I, output: O, server: Arc<S>, executor: E) -> Self {
-        let (output_tx, output_rx) = mpsc::channel(0);
-        let client = LanguageClientImpl::new(output_tx.clone());
-
-        Self {
-            input,
-            output,
-            output_tx,
-            output_rx,
-            server,
-            client,
-            executor,
-            middleware: AggregateMiddleware::new(),
-        }
-    }
-
-    /// Attaches a middleware to the service.
-    pub fn middleware(mut self, middleware: Arc<dyn Middleware>) -> Self {
-        self.middleware.middlewares.push(middleware);
-        self
-    }
-
     /// Starts the service and processes messages.
     /// It is guaranteed that all notifications are processed in order.
     pub async fn listen(self) {
+        let (output_tx, mut output_rx) = mpsc::channel(0);
         let output = self.output;
-        let mut output_rx = self.output_rx;
-        let middleware = self.middleware.clone();
-        self.executor
-            .spawn(async move {
-                let mut output = FramedWrite::new(output, LspCodec);
-                while let Some(mut message) = output_rx.next().await {
-                    match &mut message {
-                        Message::Request(ref mut request) => {
-                            middleware.on_outgoing_request(request).await;
-                        }
-                        Message::Notification(ref mut notification) => {
-                            middleware.on_outgoing_notification(notification).await;
-                        }
-                        Message::Response(_) => {}
-                    };
+        let middleware = AggregateMiddleware {
+            middlewares: self.middlewares,
+        };
+        {
+            let middleware = middleware.clone();
+            self.executor
+                .spawn(async move {
+                    let mut output = FramedWrite::new(output, LspCodec);
+                    while let Some(mut message) = output_rx.next().await {
+                        match &mut message {
+                            Message::Request(ref mut request) => {
+                                middleware.on_outgoing_request(request).await;
+                            }
+                            Message::Notification(ref mut notification) => {
+                                middleware.on_outgoing_notification(notification).await;
+                            }
+                            Message::Response(_) => {}
+                        };
 
-                    let json =
-                        serde_json::to_string(&message).expect("failed to serialize message");
-                    output.send(json).await.expect("failed to send message");
-                }
-            })
-            .expect("failed to spawn future");
+                        let json =
+                            serde_json::to_string(&message).expect("failed to serialize message");
+                        output.send(json).await.expect("failed to send message");
+                    }
+                })
+                .expect("failed to spawn future");
+        }
 
+        let client = LanguageClientImpl::new(output_tx.clone());
         let mut input = FramedRead::new(self.input, LspCodec);
         while let Some(Ok(json)) = input.next().await {
             let server = Arc::clone(&self.server);
-            let client = self.client.clone();
-            let mut output = self.output_tx.clone();
+            let client = client.clone();
+            let mut output = output_tx.clone();
             let executor = self.executor.clone();
-            let middleware = self.middleware.clone();
+            let middleware = middleware.clone();
 
             match serde_json::from_str(&json) {
                 Ok(message) => {

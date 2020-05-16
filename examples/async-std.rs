@@ -33,8 +33,13 @@ fn main() {
         .init()
         .expect("failed to init logger");
 
-    let stdin = async_std::io::stdin();
-    let stdout = async_std::io::stdout();
-    let service = LanguageService::new(stdin, stdout, Arc::new(Server), AsyncStd);
-    AsyncStd::block_on(service.listen());
+    AsyncStd::block_on(
+        LanguageService::builder()
+            .server(Arc::new(Server))
+            .input(async_std::io::stdin())
+            .output(async_std::io::stdout())
+            .executor(AsyncStd)
+            .build()
+            .listen(),
+    );
 }

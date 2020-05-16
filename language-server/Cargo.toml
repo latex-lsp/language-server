@@ -31,6 +31,7 @@ nom = "5.1"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 serde_repr = "0.1"
+typed-builder = "0.5"
 
 [dev-dependencies]
 async_executors = { version = "0.2", features = ["tokio_tp"] }
