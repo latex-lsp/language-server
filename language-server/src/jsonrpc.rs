@@ -103,8 +103,9 @@ impl Request {
 pub struct Response {
     pub jsonrpc: String,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "serde_json::Value::is_null")]
+    #[serde(default = "serde_json::Value::default")]
+    pub result: serde_json::Value,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<Error>,
@@ -117,7 +118,7 @@ impl Response {
     pub fn result(result: serde_json::Value, id: Id) -> Self {
         Self {
             jsonrpc: PROTOCOL_VERSION.to_owned(),
-            result: Some(result),
+            result,
             error: None,
             id: Some(id),
         }
@@ -127,7 +128,7 @@ impl Response {
     pub fn error(error: Error, id: Option<Id>) -> Self {
         Self {
             jsonrpc: PROTOCOL_VERSION.to_owned(),
-            result: None,
+            result: serde_json::Value::Null,
             error: Some(error),
             id,
         }

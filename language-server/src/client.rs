@@ -152,7 +152,7 @@ impl ResponseHandler for Client {
         let id = response.id.expect("Expected response with id");
         let result = match response.error {
             Some(why) => Err(why),
-            None => Ok(response.result.unwrap_or(serde_json::Value::Null)),
+            None => Ok(response.result),
         };
 
         let result_tx = {
