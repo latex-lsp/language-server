@@ -173,7 +173,7 @@ pub trait LanguageServer {
     #[jsonrpc_method(name = "textDocument/hover", kind = "request")]
     async fn hover(
         &self,
-        params: TextDocumentPositionParams,
+        params: HoverParams,
         client: Arc<dyn LanguageClient>,
     ) -> Result<Option<Hover>> {
         Ok(None)
