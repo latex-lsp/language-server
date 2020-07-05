@@ -250,7 +250,7 @@ pub trait LanguageServer {
     #[jsonrpc_method(name = "textDocument/documentHighlight", kind = "request")]
     async fn document_highlight(
         &self,
-        params: TextDocumentPositionParams,
+        params: DocumentHighlightParams,
         client: Arc<dyn LanguageClient>,
     ) -> Result<Vec<DocumentHighlight>> {
         Ok(Vec::new())
