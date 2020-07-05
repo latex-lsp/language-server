@@ -119,22 +119,28 @@ where
     /// It is guaranteed that all notifications are processed in order.
     pub async fn listen(self) {
         let (output_tx, mut output_rx) = mpsc::channel(0);
+        let client = Arc::new(LanguageClientImpl::new(output_tx.clone()));
         let output = self.output;
         let middleware = AggregateMiddleware {
             middlewares: self.middlewares,
         };
         {
             let middleware = middleware.clone();
+            let client = Arc::clone(&client);
             self.executor
                 .spawn(async move {
                     let mut output = FramedWrite::new(output, LspCodec);
                     while let Some(mut message) = output_rx.next().await {
                         match &mut message {
                             Message::Request(ref mut request) => {
-                                middleware.on_outgoing_request(request).await;
+                                middleware
+                                    .on_outgoing_request(request, client.clone())
+                                    .await;
                             }
                             Message::Notification(ref mut notification) => {
-                                middleware.on_outgoing_notification(notification).await;
+                                middleware
+                                    .on_outgoing_notification(notification, client.clone())
+                                    .await;
                             }
                             Message::Response(_) => {}
                         };
@@ -147,7 +153,6 @@ where
                 .expect("failed to spawn future");
         }
 
-        let client = Arc::new(LanguageClientImpl::new(output_tx.clone()));
         let mut input = FramedRead::new(self.input, LspCodec);
         while let Some(Ok(json)) = input.next().await {
             let server = Arc::clone(&self.server);
@@ -177,15 +182,19 @@ where
         middleware: AggregateMiddleware,
         mut message: Message,
     ) {
-        middleware.on_incoming_message(&mut message).await;
+        middleware
+            .on_incoming_message(&mut message, client.clone())
+            .await;
 
         match message {
             Message::Request(request) => {
+                let client = client.clone();
                 executor
                     .spawn(async move {
-                        let mut response = server.handle_request(request.clone(), client).await;
+                        let mut response =
+                            server.handle_request(request.clone(), client.clone()).await;
                         middleware
-                            .on_outgoing_response(&request, &mut response)
+                            .on_outgoing_response(&request, &mut response, client)
                             .await;
 
                         output.send(Message::Response(response)).await.unwrap();

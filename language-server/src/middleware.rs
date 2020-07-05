@@ -1,4 +1,4 @@
-use crate::jsonrpc::*;
+use crate::{jsonrpc::*, LanguageClient};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -6,16 +6,25 @@ use std::sync::Arc;
 #[async_trait]
 pub trait Middleware: Send + Sync {
     /// Method invoked before an incoming message is being processed.
-    async fn on_incoming_message(&self, message: &mut Message);
+    async fn on_incoming_message(&self, message: &mut Message, client: Arc<dyn LanguageClient>);
 
     /// Method invoked before an outgoing response is being sent.
-    async fn on_outgoing_response(&self, request: &Request, response: &mut Response);
+    async fn on_outgoing_response(
+        &self,
+        request: &Request,
+        response: &mut Response,
+        client: Arc<dyn LanguageClient>,
+    );
 
     /// Method invoked before an outgoing request is being sent.
-    async fn on_outgoing_request(&self, request: &mut Request);
+    async fn on_outgoing_request(&self, request: &mut Request, client: Arc<dyn LanguageClient>);
 
     /// Method invoked before an outgoing notification is being sent.
-    async fn on_outgoing_notification(&self, notification: &mut Notification);
+    async fn on_outgoing_notification(
+        &self,
+        notification: &mut Notification,
+        client: Arc<dyn LanguageClient>,
+    );
 }
 
 #[derive(Clone)]
@@ -25,27 +34,44 @@ pub struct AggregateMiddleware {
 
 #[async_trait]
 impl Middleware for AggregateMiddleware {
-    async fn on_incoming_message(&self, message: &mut Message) {
+    async fn on_incoming_message(&self, message: &mut Message, client: Arc<dyn LanguageClient>) {
         for middleware in &self.middlewares {
-            middleware.on_incoming_message(message).await;
+            middleware
+                .on_incoming_message(message, Arc::clone(&client))
+                .await;
         }
     }
 
-    async fn on_outgoing_response(&self, request: &Request, response: &mut Response) {
+    async fn on_outgoing_response(
+        &self,
+        request: &Request,
+        response: &mut Response,
+        client: Arc<dyn LanguageClient>,
+    ) {
         for middleware in &self.middlewares {
-            middleware.on_outgoing_response(request, response).await;
+            middleware
+                .on_outgoing_response(request, response, Arc::clone(&client))
+                .await;
         }
     }
 
-    async fn on_outgoing_request(&self, request: &mut Request) {
+    async fn on_outgoing_request(&self, request: &mut Request, client: Arc<dyn LanguageClient>) {
         for middleware in &self.middlewares {
-            middleware.on_outgoing_request(request).await;
+            middleware
+                .on_outgoing_request(request, Arc::clone(&client))
+                .await;
         }
     }
 
-    async fn on_outgoing_notification(&self, notification: &mut Notification) {
+    async fn on_outgoing_notification(
+        &self,
+        notification: &mut Notification,
+        client: Arc<dyn LanguageClient>,
+    ) {
         for middleware in &self.middlewares {
-            middleware.on_outgoing_notification(notification).await;
+            middleware
+                .on_outgoing_notification(notification, Arc::clone(&client))
+                .await;
         }
     }
 }
@@ -67,7 +93,7 @@ impl LoggingMiddleware {
 
 #[async_trait]
 impl Middleware for LoggingMiddleware {
-    async fn on_incoming_message(&self, message: &mut Message) {
+    async fn on_incoming_message(&self, message: &mut Message, _client: Arc<dyn LanguageClient>) {
         let kind = match message {
             Message::Request(_) => "request",
             Message::Notification(_) => "notification",
@@ -77,15 +103,24 @@ impl Middleware for LoggingMiddleware {
         Self::log_message(message, &format!("Received {} (->)", kind));
     }
 
-    async fn on_outgoing_response(&self, _request: &Request, response: &mut Response) {
+    async fn on_outgoing_response(
+        &self,
+        _request: &Request,
+        response: &mut Response,
+        _client: Arc<dyn LanguageClient>,
+    ) {
         Self::log_message(response, "Sent response (<-)");
     }
 
-    async fn on_outgoing_request(&self, request: &mut Request) {
+    async fn on_outgoing_request(&self, request: &mut Request, _client: Arc<dyn LanguageClient>) {
         Self::log_message(request, "Sent request (<-)");
     }
 
-    async fn on_outgoing_notification(&self, notification: &mut Notification) {
+    async fn on_outgoing_notification(
+        &self,
+        notification: &mut Notification,
+        _client: Arc<dyn LanguageClient>,
+    ) {
         Self::log_message(notification, "Sent notification (<-)");
     }
 }
