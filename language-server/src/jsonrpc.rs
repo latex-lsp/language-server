@@ -1,5 +1,5 @@
 //! Types for JSON-RPC messages.
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_repr::*;
 
 const PROTOCOL_VERSION: &str = "2.0";
@@ -103,9 +103,9 @@ impl Request {
 pub struct Response {
     pub jsonrpc: String,
 
-    #[serde(skip_serializing_if = "serde_json::Value::is_null")]
-    #[serde(default = "serde_json::Value::default")]
-    pub result: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, deserialize_with = "deserialize_some")]
+    pub result: Option<serde_json::Value>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<Error>,
@@ -118,7 +118,7 @@ impl Response {
     pub fn result(result: serde_json::Value, id: Id) -> Self {
         Self {
             jsonrpc: PROTOCOL_VERSION.to_owned(),
-            result,
+            result: Some(result),
             error: None,
             id: Some(id),
         }
@@ -128,7 +128,7 @@ impl Response {
     pub fn error(error: Error, id: Option<Id>) -> Self {
         Self {
             jsonrpc: PROTOCOL_VERSION.to_owned(),
-            result: serde_json::Value::Null,
+            result: None,
             error: Some(error),
             id,
         }
@@ -161,4 +161,52 @@ pub enum Message {
     Request(Request),
     Notification(Notification),
     Response(Response),
+}
+
+// Any value that is present is considered Some value, including null.
+fn deserialize_some<'de, T, D>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    T: Deserialize<'de>,
+    D: Deserializer<'de>,
+{
+    Deserialize::deserialize(deserializer).map(Some)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serialize_response_success_null() {
+        let response = Response::result(serde_json::Value::Null, Id::Number(42));
+        let json = serde_json::to_string(&response).unwrap();
+        assert_eq!(json, r#"{"jsonrpc":"2.0","result":null,"id":42}"#);
+    }
+
+    #[test]
+    fn deserialize_response_success_null() {
+        let json = r#"{"jsonrpc":"2.0","result":null,"id":42}"#;
+        let response: Response = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            response,
+            Response::result(serde_json::Value::Null, Id::Number(42))
+        );
+    }
+
+    #[test]
+    fn serialize_response_error_without_id() {
+        let response = Response::error(Error::deserialize_error(), None);
+        let json = serde_json::to_string(&response).unwrap();
+        assert_eq!(
+            json,
+            r#"{"jsonrpc":"2.0","error":{"code":-32602,"message":"Could not deserialize parameter object"},"id":null}"#
+        );
+    }
+
+    #[test]
+    fn deserialize_response_error_without_id() {
+        let json = r#"{"jsonrpc":"2.0","error":{"code":-32602,"message":"Could not deserialize parameter object"},"id":null}"#;
+        let response: Response = serde_json::from_str(json).unwrap();
+        assert_eq!(response, Response::error(Error::deserialize_error(), None));
+    }
 }

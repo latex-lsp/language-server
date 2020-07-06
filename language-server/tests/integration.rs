@@ -69,6 +69,7 @@ where
     reader.read_line(&mut String::new()).await.unwrap(); // skip newline
     let mut buf = vec![0; length];
     reader.read_exact(&mut buf).await.unwrap();
+    println!("{}", String::from_utf8_lossy(&buf).into_owned());
     assert_eq!(serde_json::from_slice::<T>(&buf).unwrap(), expected);
 }
 
