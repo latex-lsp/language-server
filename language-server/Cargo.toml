@@ -35,7 +35,7 @@ typed-builder = "0.6"
 
 [dev-dependencies]
 async_executors = { version = "0.2", features = ["tokio_tp"] }
-indoc = "0.3"
+indoc = "1.0"
 mockall = "0.7"
 sluice = "0.5"
 tokio = "0.2"
