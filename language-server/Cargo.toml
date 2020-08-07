@@ -34,7 +34,7 @@ serde_repr = "0.1"
 typed-builder = "0.7"
 
 [dev-dependencies]
-async_executors = { version = "0.2", features = ["tokio_tp"] }
+async_executors = { version = "0.3", features = ["tokio_tp"] }
 indoc = "1.0"
 mockall = "0.7"
 sluice = "0.5"
