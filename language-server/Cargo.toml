@@ -27,7 +27,7 @@ futures_codec = "0.4"
 language-server-macros = { version = "0.1.0", path = "../language-server-macros" }
 log = "0.4"
 lsp-types = "0.79"
-nom = "5.1"
+nom = "6.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 serde_repr = "0.1"
